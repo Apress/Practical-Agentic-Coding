@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenithStays - Agentic UX Mocks</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 pb-20">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-violet-600 p-2 rounded-lg">
+                    <i data-lucide="building-2" class="text-white w-5 h-5"></i>
+                </div>
+                <span class="font-bold text-xl text-slate-800">ZenithStays</span>
+            </div>
+            <nav class="flex space-x-6 text-sm font-medium text-slate-500">
+                <a href="#" class="text-violet-600">Dashboard</a>
+                <a href="#" class="hover:text-slate-800">Calendar</a>
+                <a href="#" class="hover:text-slate-800">Properties</a>
+                <a href="#" class="hover:text-slate-800">Settings</a>
+            </nav>
+            <div class="flex items-center space-x-4">
+                <div class="bg-slate-100 p-2 rounded-full">
+                    <i data-lucide="bell" class="w-5 h-5 text-slate-600"></i>
+                </div>
+                <div class="w-8 h-8 bg-slate-200 rounded-full"></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 mt-10 space-y-16">
+
+        <!-- MOCK 1: DASHBOARD NUDGE -->
+        <section>
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">1. Passive Insight (Dashboard)</h2>
+                    <p class="text-slate-500 mt-1">Status: <span class="text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">Live / Implemented</span></p>
+                    <p class="text-sm text-slate-400 mt-2 max-w-xl">
+                        When the user logs in, the Strategy Agent analyzes data in the background. If a critical opportunity is found, it injects this high-priority card at the top of the dashboard.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Dashboard Frame -->
+            <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 relative overflow-hidden">
+                
+                <!-- HEADER -->
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
+                        <p class="text-slate-500">Welcome back, Revenue Team</p>
+                    </div>
+                    <div class="text-sm text-slate-400">next sync in 5m</div>
+                </div>
+
+                <!-- INSIGHT CARD (THE FLUX FEATURE) -->
+                <div class="mb-8 bg-gradient-to-r from-violet-600 to-indigo-700 rounded-xl p-6 text-white shadow-xl relative overflow-hidden group hover:scale-[1.01] transition-transform duration-300">
+                    <!-- Decor -->
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <i data-lucide="sparkles" class="w-32 h-32"></i>
+                    </div>
+
+                    <div class="relative z-10 flex items-start justify-between">
+                        <div class="flex items-start space-x-4">
+                            <div class="p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/10">
+                                <i data-lucide="zap" class="w-6 h-6 text-yellow-300"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold flex items-center gap-2">
+                                    Strategy Opportunity
+                                    <span class="text-xs bg-yellow-400/20 text-yellow-200 px-2 py-0.5 rounded border border-yellow-400/30">High Confidence</span>
+                                </h3>
+                                <p class="mt-2 text-indigo-100 max-w-2xl leading-relaxed">
+                                    Occupancy for <strong>Dec 24-26</strong> is trailing the compset by 15%. 
+                                    However, search volume for "Miami Holiday" spiked yesterday.
+                                    <br>Recommendation: <strong>Launch "Flash Holiday" Promo (-10%)</strong> to capture late demand.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col space-y-3">
+                            <button onclick="document.getElementById('modal-1').classList.remove('hidden')" class="px-5 py-2.5 bg-white text-indigo-700 font-semibold rounded-lg shadow hover:bg-indigo-50 transition flex items-center gap-2">
+                                <i data-lucide="check" class="w-4 h-4"></i> Approve Promo
+                            </button>
+                            <button class="px-5 py-2.5 bg-transparent border border-white/30 text-white font-medium rounded-lg hover:bg-white/10 transition text-sm">
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- STANDARD KPI GRID (Context) -->
+                <div class="grid grid-cols-4 gap-6 opacity-60 pointer-events-none grayscale-[0.5]">
+                    <div class="p-5 border border-slate-100 rounded-xl bg-slate-50">
+                        <div class="text-slate-400 text-sm font-medium">RevPAR</div>
+                        <div class="text-2xl font-bold text-slate-800 mt-1">$245.00</div>
+                    </div>
+                    <div class="p-5 border border-slate-100 rounded-xl bg-slate-50">
+                        <div class="text-slate-400 text-sm font-medium">ADR</div>
+                        <div class="text-2xl font-bold text-slate-800 mt-1">$289.00</div>
+                    </div>
+                    <div class="p-5 border border-slate-100 rounded-xl bg-slate-50">
+                        <div class="text-slate-400 text-sm font-medium">Occupancy</div>
+                        <div class="text-2xl font-bold text-slate-800 mt-1">84%</div>
+                    </div>
+                    <div class="p-5 border border-slate-100 rounded-xl bg-slate-50">
+                        <div class="text-slate-400 text-sm font-medium">Pacing</div>
+                        <div class="text-2xl font-bold text-emerald-600 mt-1">+12%</div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- MOCK 2: CHAT ASSISTANT -->
+        <section>
+             <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">2. Active Assistant (Chat)</h2>
+                    <p class="text-slate-500 mt-1">Status: <span class="text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded">Future Phase</span></p>
+                    <p class="text-sm text-slate-400 mt-2 max-w-xl">
+                        Users can open a side panel to ask deep analytical questions. The Agent cites the "Knowledge Base" (SOPs) or "Market Tools" (PredictHQ).
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-slate-100 p-10 rounded-xl border border-dashed border-slate-300 relative h-[600px] flex items-center justify-center">
+                
+                <!-- Mock Background App -->
+                <div class="absolute inset-4 bg-white shadow-sm rounded-lg opacity-40"></div>
+
+                <!-- CHAT WINDOW -->
+                <div class="absolute bottom-0 right-8 w-[400px] bg-white rounded-t-2xl shadow-2xl border border-slate-200 flex flex-col h-[550px] overflow-hidden">
+                    
+                    <!-- Chat Header -->
+                    <div class="bg-slate-900 text-white p-4 flex items-center justify-between shrink-0">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-500 to-fuchsia-500 flex items-center justify-center">
+                                <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold">Revenue Assistant</h3>
+                                <p class="text-xs text-slate-400">Powered by Bedrock</p>
+                            </div>
+                        </div>
+                        <i data-lucide="x" class="w-5 h-5 text-slate-400 cursor-pointer hover:text-white"></i>
+                    </div>
+
+                    <!-- Chat Body -->
+                    <div class="flex-1 bg-slate-50 p-4 overflow-y-auto space-y-4">
+                        
+                        <!-- User Message -->
+                        <div class="flex justify-end">
+                            <div class="bg-indigo-600 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm shadow-sm">
+                                Why is our forecast low for next week?
+                            </div>
+                        </div>
+
+                        <!-- Agent Thinking State -->
+                        <div class="flex justify-center my-2">
+                             <div class="bg-slate-200/50 px-3 py-1 rounded-full text-xs text-slate-500 flex items-center gap-2">
+                                <i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Checking Market Events...
+                             </div>
+                        </div>
+
+                        <!-- Agent Response -->
+                        <div class="flex justify-start">
+                            <div class="flex gap-3 max-w-[90%]">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-500 to-fuchsia-500 flex items-center justify-center shrink-0 mt-1">
+                                    <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="bg-white border border-slate-200 text-slate-700 px-4 py-3 rounded-2xl rounded-tl-sm text-sm shadow-sm">
+                                        <p>I found a significant drop in demand because the <strong>Tech Summit 2025</strong> was cancelled yesterday.</p>
+                                        <div class="mt-3 pt-3 border-t border-slate-100">
+                                            <p class="text-xs font-semibold text-slate-500 mb-1">Source:</p>
+                                            <div class="bg-slate-50 border border-slate-200 rounded p-2 flex items-center gap-2">
+                                                <i data-lucide="newspaper" class="w-3 h-3 text-blue-500"></i>
+                                                <span class="text-xs text-blue-600 truncate">PredictHQ Event Alert: #EV-9921</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white border border-slate-200 text-slate-700 px-4 py-3 rounded-2xl rounded-tl-sm text-sm shadow-sm">
+                                         <p>Should I run a simulation to see if dropping rates by $20 will recover occupancy?</p>
+                                    </div>
+                                    <div class="flex gap-2 mt-1">
+                                        <button class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full hover:bg-indigo-100 border border-indigo-100">Yes, run sim</button>
+                                        <button class="px-3 py-1.5 bg-white text-slate-600 text-xs font-medium rounded-full hover:bg-slate-50 border border-slate-200">No, thanks</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Input -->
+                    <div class="p-3 bg-white border-t border-slate-200">
+                        <div class="relative">
+                            <input type="text" placeholder="Ask about rates, events, or strategy..." class="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+                            <button class="absolute right-2 top-2 p-1 text-slate-400 hover:text-violet-600">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- MOCK 3: APPROVAL MODAL -->
+        <section id="modal-container">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">3. Approval Workflow (Modal)</h2>
+                    <p class="text-sm text-slate-400 mt-2 max-w-xl">
+                        When a user clicks "Approve Action", this modal confirms the write-back to the PMS.
+                    </p>
+                </div>
+                 <button onclick="document.getElementById('modal-1').classList.remove('hidden')" class="px-4 py-2 bg-slate-200 text-slate-700 text-sm font-medium rounded hover:bg-slate-300">
+                    Re-open Modal
+                </button>
+            </div>
+
+            <!-- Modal Backdrop (Inline Mock) -->
+            <div id="modal-1" class="relative z-50">
+                <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"></div>
+                
+                <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+                    <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                        
+                        <!-- Modal Panel -->
+                        <div class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-slate-100">
+                            
+                            <!-- Header -->
+                            <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                                <div class="sm:flex sm:items-start">
+                                    <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
+                                        <i data-lucide="tag" class="w-5 h-5 text-indigo-600"></i>
+                                    </div>
+                                    <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                                        <h3 class="text-lg font-semibold leading-6 text-slate-900">Confirm Price Update</h3>
+                                        <div class="mt-2">
+                                            <p class="text-sm text-slate-500">
+                                                This will update the standard rate for <strong>Deluxe King</strong> on PMS and Channel Manager.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Content Table -->
+                            <div class="px-6 py-2">
+                                <div class="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                                    <table class="min-w-full divide-y divide-slate-200">
+                                        <thead class="bg-slate-100">
+                                            <tr>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">Current</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">New Rate</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-200 text-sm">
+                                            <tr>
+                                                <td class="px-3 py-2 text-slate-700">Dec 24</td>
+                                                <td class="px-3 py-2 text-slate-400 line-through">$240</td>
+                                                <td class="px-3 py-2 font-bold text-emerald-600">$216 (-10%)</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-3 py-2 text-slate-700">Dec 25</td>
+                                                <td class="px-3 py-2 text-slate-400 line-through">$260</td>
+                                                <td class="px-3 py-2 font-bold text-emerald-600">$234 (-10%)</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Footer Actions -->
+                            <div class="bg-slate-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 border-t border-slate-100 mt-4">
+                                <button onclick="alert('Action API Triggered!'); document.getElementById('modal-1').classList.add('hidden')" type="button" class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:ml-3 sm:w-auto">
+                                    Confirm Update
+                                </button>
+                                <button onclick="document.getElementById('modal-1').classList.add('hidden')" type="button" class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 sm:mt-0 sm:w-auto">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+I am planning to develop a web application and need guidance on the initial
+steps. My preference is to begin by exploring concepts within this current
+working folder, though I intend to transition to a spec-driven development
+approach later. The goal is to first establish the web app based on a specific
+persona and intent. Once I solidify the core idea, I will transition to a formal
+specification mode. This statement represents my overarching goal for the
+application. It gives a persona and purpose to my web application: you are a
+"Witty Tech Journalist." Your tone is sharp, concise, and slightly cynical. You
+prioritize substance over hype. The purpose of this project is to create a news
+aggregator that curates and presents tech stories along with witty summaries.

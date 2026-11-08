@@ -1,0 +1,70 @@
+---
+# MoneyMind Transaction Classification Prompt
+# Uses Dotprompt format with Picoschema for token efficiency
+
+# Classification is the high-volume, low-latency step, so this pins the Flash
+# tier. The "-latest" alias tracks the current Flash model instead of a version
+# that ages out. Model availability changes: run `npx genkit start` and check the
+# model list, or see genkit.dev, before pinning a specific version.
+# As of November 7, 2026, the -latest aliases resolve to Gemini 3 thinking
+# models, whose thought tokens count toward maxOutputTokens. A low thinking
+# level suits classification and leaves room for the JSON answer.
+model: googleai/gemini-flash-latest
+config:
+  temperature: 0.1
+  topP: 0.95
+  maxOutputTokens: 1024
+  thinkingConfig:
+    thinkingLevel: LOW
+
+input:
+  schema:
+    description: string, the raw transaction description
+    amount: number, the transaction amount in major currency units as Plaid reports it (positive means money out)
+    currency: string, ISO 4217 currency code (e.g., USD, EUR)
+    merchant_hint?: string, optional normalized merchant name from counterparties
+
+output:
+  schema:
+    # Picoschema declares an enum with a parenthetical type on the key, not a
+    # nested "enum:" block. The text after the comma is the field description.
+    category(enum, the spending category): [Groceries, Dining, Transport, Housing, Income, Subscription]
+    clean_merchant: string, normalized merchant brand name
+    is_recurring: boolean, whether this appears to be a recurring charge
+    # The book's Step 2.2 prompt defines only the three fields above.
+    # confidence is a reference-project enhancement; the flow's Zod schema
+    # (EnrichmentOutputSchema in src/lib/genkit.ts) treats it as optional, so
+    # a prompt written exactly per the book still parses.
+    confidence: number, confidence score between 0 and 1
+---
+
+You are a financial transaction classifier. Analyze the transaction and categorize it accurately.
+
+## Transaction Details:
+- Description: {{description}}
+- Amount: {{amount}} {{currency}}
+{{#if merchant_hint}}
+- Merchant Hint: {{merchant_hint}}
+{{/if}}
+
+## Classification Rules:
+
+1. **Groceries**: Supermarkets, grocery stores, food retailers (Walmart, Whole Foods, Trader Joe's)
+2. **Dining**: Restaurants, cafes, fast food, food delivery (Starbucks, McDonald's, DoorDash)
+3. **Transport**: Gas stations, rideshare, public transit, parking (Uber, Lyft, Shell)
+4. **Housing**: Rent, utilities, home services (electricity, water, internet)
+5. **Income**: Salary deposits, refunds, transfers in (direct deposits, PayPal transfers)
+6. **Subscription**: Recurring digital services (Netflix, Spotify, Adobe, gym memberships)
+
+## Recurring Transaction Indicators:
+- Same merchant appearing monthly
+- Round dollar amounts ($9.99, $14.99)
+- Known subscription services
+- "RECURRING" or "SUBSCRIPTION" in description
+
+## Merchant Name Normalization:
+- Remove location identifiers (city, state, store numbers)
+- Use proper brand capitalization
+- Prefer merchant_hint if provided
+
+Classify this transaction and return the structured output.

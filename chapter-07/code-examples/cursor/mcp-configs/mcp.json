@@ -1,0 +1,55 @@
+{
+  "mcpServers": {
+    "linear": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.linear.app/mcp"]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@toolbox-sdk/server", "--prebuilt=postgres", "--stdio"],
+      "env": {
+        "POSTGRES_HOST": "${env:POSTGRES_HOST}",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DATABASE": "${env:POSTGRES_DATABASE}",
+        "POSTGRES_USER": "${env:POSTGRES_USER}",
+        "POSTGRES_PASSWORD": "${env:POSTGRES_PASSWORD}"
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/path/to/allowed/directory"
+      ]
+    },
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${env:GITHUB_PAT}"
+      }
+    },
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "@zencoderai/slack-mcp-server"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${env:SLACK_BOT_TOKEN}",
+        "SLACK_TEAM_ID": "${env:SLACK_TEAM_ID}"
+      }
+    },
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "env": {
+        "FIGMA_API_KEY": "${env:FIGMA_API_KEY}"
+      }
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@itseasy21/mcp-knowledge-graph"],
+      "env": {
+        "MEMORY_FILE_PATH": "${userHome}/.cursor/memory.jsonl"
+      }
+    }
+  }
+}

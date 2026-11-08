@@ -1,0 +1,227 @@
+{
+  "dashboard": {
+    "title": "Rollback Analysis",
+    "description": "Track rollback frequency, causes, and recovery time",
+    "tags": ["rollback", "deployment", "incident-response"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Rollback Rate",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(deployment_rollback_total[24h])) / sum(rate(deployment_total[24h]))",
+            "legendFormat": "Rollback Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 0.05, "color": "yellow"},
+                {"value": 0.1, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Mean Time to Rollback (MTTR)",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+        "targets": [
+          {
+            "expr": "avg(rollback_duration_seconds)",
+            "legendFormat": "Avg Rollback Time"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 120, "color": "yellow"},
+                {"value": 300, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Rollback Success Rate",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rollback_success_total) / sum(deployment_rollback_total)",
+            "legendFormat": "Success Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.95, "color": "yellow"},
+                {"value": 0.99, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Total Rollbacks (Last 7 Days)",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(increase(deployment_rollback_total[7d]))",
+            "legendFormat": "Total Rollbacks"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Rollbacks Over Time",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(deployment_rollback_total[5m])) by (service)",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Rollbacks/min"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Rollback Reasons Breakdown",
+        "type": "piechart",
+        "gridPos": {"h": 10, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "sum(deployment_rollback_total) by (reason)",
+            "legendFormat": "{{reason}}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Services with Most Rollbacks",
+        "type": "bargauge",
+        "gridPos": {"h": 10, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "topk(10, sum(deployment_rollback_total) by (service))",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient"
+        }
+      },
+      {
+        "id": 8,
+        "title": "Rollback Duration Distribution",
+        "type": "heatmap",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 26},
+        "targets": [
+          {
+            "expr": "rate(rollback_duration_seconds_bucket[5m])",
+            "format": "heatmap",
+            "legendFormat": "{{le}}"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Impact: Users Affected by Rollbacks",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 26},
+        "targets": [
+          {
+            "expr": "sum(rollback_affected_users) by (service)",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Users"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Rollback Patterns: Day of Week",
+        "type": "heatmap",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 34},
+        "targets": [
+          {
+            "expr": "sum(increase(deployment_rollback_total[1h])) by (day_of_week, hour_of_day)",
+            "format": "heatmap"
+          }
+        ],
+        "description": "Identifies when rollbacks are most common (e.g., Friday deployments?)"
+      }
+    ]
+  },
+  "message": "Placeholder dashboard for rollback analysis. Track when, why, and how often rollbacks occur.",
+  "instructions": [
+    "To use this dashboard:",
+    "1. Import in Grafana",
+    "2. Connect to Prometheus data source",
+    "3. Ensure your deployer exports rollback metrics:",
+    "   - deployment_rollback_total (with reason, service labels)",
+    "   - rollback_duration_seconds (histogram)",
+    "   - rollback_success_total",
+    "   - rollback_affected_users",
+    "4. Use these insights to:",
+    "   - Identify problematic services",
+    "   - Understand common failure modes",
+    "   - Measure recovery effectiveness",
+    "   - Optimize rollback procedures"
+  ],
+  "metrics_to_export": {
+    "deployment_rollback_total": "Counter of rollbacks (labels: service, version, reason)",
+    "rollback_duration_seconds": "Histogram of rollback durations",
+    "rollback_success_total": "Counter of successful rollbacks",
+    "rollback_affected_users": "Gauge of users impacted during rollback window",
+    "deployment_total": "Counter for calculating rollback rate"
+  },
+  "rollback_reasons": [
+    "high_error_rate",
+    "high_latency",
+    "health_check_failed",
+    "resource_exhaustion",
+    "manual_trigger",
+    "validation_timeout"
+  ],
+  "insights": {
+    "low_rollback_rate": "< 5% is good, means deployments are usually successful",
+    "fast_mttr": "< 2 minutes is excellent for automated rollback",
+    "common_reasons": "If one reason dominates, focus on that failure mode",
+    "service_patterns": "Some services may need more pre-deployment testing"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Documentation Sync",
+  "description": "Manually triggered hook to update project documentation when source code changes",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Source code has been modified. Please review the changes and update the documentation accordingly:\n\n1. If there is a README.md file, update it to reflect:\n   - Any new features or capabilities\n   - API changes or new endpoints\n   - Updated usage instructions\n   - Changed configuration options\n\n2. If there is a /docs folder, update relevant documentation files:\n   - API documentation\n   - Architecture guides\n   - Developer setup guides\n   - Changelog entries\n\n3. Ensure code examples in documentation still work\n\n4. Update any inline code comments that reference outdated behavior\n\nFocus on keeping the documentation accurate and up-to-date with the current codebase."
+  }
+}

@@ -1,0 +1,243 @@
+{
+  "version": "0.2",
+  "currency": "USD",
+  "projects": [
+    {
+      "name": "terraform",
+      "metadata": {
+        "path": "terraform",
+        "type": "terraform_dir",
+        "vcsSubPath": "terraform"
+      },
+      "pastBreakdown": {
+        "resources": [],
+        "totalHourlyCost": "0",
+        "totalMonthlyCost": "0"
+      },
+      "breakdown": {
+        "resources": [
+          {
+            "name": "aws_autoscaling_group.api_nodes",
+            "resourceType": "aws_autoscaling_group",
+            "tags": {
+              "service": "orders-api",
+              "env": "prod"
+            },
+            "hourlyCost": "1.536",
+            "monthlyCost": "1121.28",
+            "costComponents": [
+              {
+                "name": "Instance usage (Linux/UNIX, on-demand, m5.2xlarge)",
+                "unit": "hours",
+                "hourlyQuantity": "4",
+                "monthlyQuantity": "2920",
+                "price": "0.384",
+                "hourlyCost": "1.536",
+                "monthlyCost": "1121.28"
+              }
+            ]
+          },
+          {
+            "name": "aws_instance.bastion",
+            "resourceType": "aws_instance",
+            "tags": {
+              "service": "platform",
+              "env": "prod"
+            },
+            "hourlyCost": "0.0104",
+            "monthlyCost": "7.59",
+            "costComponents": [
+              {
+                "name": "Instance usage (Linux/UNIX, on-demand, t3.micro)",
+                "unit": "hours",
+                "hourlyQuantity": "1",
+                "monthlyQuantity": "730",
+                "price": "0.0104",
+                "hourlyCost": "0.0104",
+                "monthlyCost": "7.59"
+              }
+            ]
+          },
+          {
+            "name": "aws_db_instance.orders",
+            "resourceType": "aws_db_instance",
+            "tags": {
+              "service": "orders-api",
+              "env": "prod"
+            },
+            "hourlyCost": "0.72",
+            "monthlyCost": "525.60",
+            "costComponents": [
+              {
+                "name": "Database instance (on-demand, Multi-AZ, db.r6g.large)",
+                "unit": "hours",
+                "hourlyQuantity": "1",
+                "monthlyQuantity": "730",
+                "price": "0.64",
+                "hourlyCost": "0.64",
+                "monthlyCost": "467.20"
+              }
+            ],
+            "subresources": [
+              {
+                "name": "Storage (general purpose SSD, gp2)",
+                "metadata": {},
+                "hourlyCost": "0.08",
+                "monthlyCost": "58.40",
+                "costComponents": [
+                  {
+                    "name": "Storage",
+                    "unit": "GB",
+                    "monthlyQuantity": "512",
+                    "price": "0.115",
+                    "hourlyCost": "0.08",
+                    "monthlyCost": "58.40"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "aws_elasticache_replication_group.sessions",
+            "resourceType": "aws_elasticache_replication_group",
+            "tags": {
+              "service": "orders-api",
+              "env": "prod"
+            },
+            "hourlyCost": "0.136",
+            "monthlyCost": "99.28",
+            "costComponents": [
+              {
+                "name": "ElastiCache (on-demand, cache.t3.medium)",
+                "unit": "hours",
+                "hourlyQuantity": "2",
+                "monthlyQuantity": "1460",
+                "price": "0.068",
+                "hourlyCost": "0.136",
+                "monthlyCost": "99.28"
+              }
+            ]
+          },
+          {
+            "name": "aws_ebs_volume.data",
+            "resourceType": "aws_ebs_volume",
+            "tags": {
+              "service": "orders-api",
+              "env": "prod"
+            },
+            "hourlyCost": "0.0109",
+            "monthlyCost": "8.00",
+            "costComponents": [
+              {
+                "name": "Storage (general purpose SSD, gp3)",
+                "unit": "GB",
+                "monthlyQuantity": "100",
+                "price": "0.08",
+                "hourlyCost": "0.0109",
+                "monthlyCost": "8.00"
+              }
+            ]
+          },
+          {
+            "name": "aws_lb.public",
+            "resourceType": "aws_lb",
+            "tags": {
+              "service": "orders-api",
+              "env": "prod"
+            },
+            "hourlyCost": "0.0225",
+            "monthlyCost": "16.43",
+            "costComponents": [
+              {
+                "name": "Application load balancer",
+                "unit": "hours",
+                "hourlyQuantity": "1",
+                "monthlyQuantity": "730",
+                "price": "0.0225",
+                "hourlyCost": "0.0225",
+                "monthlyCost": "16.43"
+              }
+            ]
+          },
+          {
+            "name": "aws_nat_gateway.private",
+            "resourceType": "aws_nat_gateway",
+            "tags": {
+              "service": "platform",
+              "env": "prod"
+            },
+            "hourlyCost": "0.045",
+            "monthlyCost": "32.85",
+            "costComponents": [
+              {
+                "name": "NAT gateway",
+                "unit": "hours",
+                "hourlyQuantity": "1",
+                "monthlyQuantity": "730",
+                "price": "0.045",
+                "hourlyCost": "0.045",
+                "monthlyCost": "32.85"
+              }
+            ]
+          },
+          {
+            "name": "aws_s3_bucket.artifacts",
+            "resourceType": "aws_s3_bucket",
+            "tags": {
+              "service": "platform",
+              "env": "prod"
+            },
+            "hourlyCost": null,
+            "monthlyCost": null,
+            "costComponents": [
+              {
+                "name": "Standard storage",
+                "unit": "GB",
+                "monthlyQuantity": null,
+                "price": "0.023",
+                "hourlyCost": null,
+                "monthlyCost": null
+              }
+            ]
+          }
+        ],
+        "totalHourlyCost": "2.4808",
+        "totalMonthlyCost": "1811.03"
+      },
+      "diff": {
+        "resources": [],
+        "totalHourlyCost": "2.4808",
+        "totalMonthlyCost": "1811.03"
+      },
+      "summary": {
+        "totalDetectedResources": 9,
+        "totalSupportedResources": 8,
+        "totalUnsupportedResources": 1,
+        "totalUsageBasedResources": 1,
+        "totalNoPriceResources": 0,
+        "unsupportedResourceCounts": {
+          "aws_cloudwatch_log_group": 1
+        },
+        "noPriceResourceCounts": {}
+      }
+    }
+  ],
+  "totalHourlyCost": "2.4808",
+  "totalMonthlyCost": "1811.03",
+  "pastTotalHourlyCost": "0",
+  "pastTotalMonthlyCost": "0",
+  "diffTotalHourlyCost": "2.4808",
+  "diffTotalMonthlyCost": "1811.03",
+  "timeGenerated": "2026-02-14T09:12:44Z",
+  "summary": {
+    "totalDetectedResources": 9,
+    "totalSupportedResources": 8,
+    "totalUnsupportedResources": 1,
+    "totalUsageBasedResources": 1,
+    "totalNoPriceResources": 0,
+    "unsupportedResourceCounts": {
+      "aws_cloudwatch_log_group": 1
+    },
+    "noPriceResourceCounts": {}
+  }
+}

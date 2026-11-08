@@ -1,0 +1,32 @@
+# Decision Journal record, Chapter 9, Section 9.4.
+#
+# The structure is from the chapter, with one addition: `affects` names the
+# components this decision constrains. That field is what makes "what decisions
+# affect the user service?" answerable, and it becomes the AFFECTS relationship
+# in the challenge lab's Neo4j graph (Section 9.7).
+decision:
+  title: "Use PostgreSQL over MongoDB for user data"
+  date: 2024-01-15
+  context: "Choosing primary datastore for user service"
+
+  options_considered:
+    - name: "PostgreSQL"
+      pros: ["ACID compliance", "Team familiarity", "Existing infrastructure"]
+      cons: ["Schema migrations", "Less flexible for evolving data"]
+
+    - name: "MongoDB"
+      pros: ["Schema flexibility", "Document model fits user profiles"]
+      cons: ["Eventual consistency concerns", "Team learning curve"]
+
+  decision: "PostgreSQL"
+  rationale: "User data requires strong consistency for billing integration.
+              Team velocity matters more than schema flexibility at our stage."
+
+  consequences:
+    - "Must plan schema migrations carefully"
+    - "User profile extensions need migration scripts"
+    - "Can use existing Postgres expertise"
+
+  affects:
+    - "user-service"
+    - "billing-service"

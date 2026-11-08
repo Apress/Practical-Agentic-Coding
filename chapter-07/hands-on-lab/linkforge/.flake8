@@ -1,0 +1,4 @@
+[flake8]
+# Same limit as the CI workflow (deploy-azure.yml), so `flake8 src tests` matches the gate.
+max-line-length = 88
+exclude = .git,__pycache__,venv,.venv,htmlcov

@@ -1,0 +1,66 @@
+# Inventory service, production, same window as gateway.log.
+# Correlate on request_id. The audit lines are emitted by a cron that calls
+# /inventory/audit every 60 seconds.
+
+2026-07-18T14:31:02.198Z INFO [inventory] reserve ok request_id=req_7f2a00 order=ord_88412 sku=HEADSET-77 qty=1 reservation=rsv_a10c4b7712
+2026-07-18T14:31:02.399Z INFO [inventory] commit ok request_id=req_7f2a00 order=ord_88412 sku=HEADSET-77 reservation=rsv_a10c4b7712
+2026-07-18T14:31:47.955Z INFO [inventory] reserve ok request_id=req_7f2a01 order=ord_88479 sku=CABLE-9 qty=2 reservation=rsv_c73f019ee4
+2026-07-18T14:31:48.198Z INFO [inventory] commit ok request_id=req_7f2a01 order=ord_88479 sku=CABLE-9 reservation=rsv_c73f019ee4
+
+2026-07-18T14:32:00.002Z INFO [inventory] audit sku=FLAGSHIP-001 on_hand=3 held=0 committed=0 available=3
+
+# ---- Six checkouts arrive inside 13ms. All six get a hold. ----
+
+2026-07-18T14:32:00.331Z INFO [inventory] reserve ok request_id=req_7f2a11 order=ord_88510 sku=FLAGSHIP-001 qty=1 reservation=rsv_d0119a4c83
+2026-07-18T14:32:00.336Z INFO [inventory] reserve ok request_id=req_7f2a12 order=ord_88511 sku=FLAGSHIP-001 qty=1 reservation=rsv_6fa2b31d07
+2026-07-18T14:32:00.337Z INFO [inventory] reserve ok request_id=req_7f2a13 order=ord_88512 sku=FLAGSHIP-001 qty=1 reservation=rsv_41b7e0cc95
+2026-07-18T14:32:00.339Z INFO [inventory] reserve ok request_id=req_7f2a14 order=ord_88513 sku=FLAGSHIP-001 qty=1 reservation=rsv_ba55d29e60
+2026-07-18T14:32:00.341Z INFO [inventory] reserve ok request_id=req_7f2a15 order=ord_88514 sku=FLAGSHIP-001 qty=1 reservation=rsv_18cc7be404
+2026-07-18T14:32:00.344Z INFO [inventory] reserve ok request_id=req_7f2a16 order=ord_88515 sku=FLAGSHIP-001 qty=1 reservation=rsv_9e2143da7f
+
+# Six holds granted on three units. No "reserve rejected" line anywhere in
+# this window, even though the fourth, fifth and sixth requests should have
+# been rejected with out_of_stock.
+
+2026-07-18T14:32:00.610Z INFO [inventory] commit ok request_id=req_7f2a11 order=ord_88510 sku=FLAGSHIP-001 reservation=rsv_d0119a4c83
+2026-07-18T14:32:00.655Z INFO [inventory] commit ok request_id=req_7f2a13 order=ord_88512 sku=FLAGSHIP-001 reservation=rsv_41b7e0cc95
+2026-07-18T14:32:00.701Z INFO [inventory] commit ok request_id=req_7f2a12 order=ord_88511 sku=FLAGSHIP-001 reservation=rsv_6fa2b31d07
+2026-07-18T14:32:00.742Z ERROR [inventory] commit failed request_id=req_7f2a14 reason=oversold_inventory sku=FLAGSHIP-001 on_hand=0 requested=1 reservation=rsv_ba55d29e60 order=ord_88513
+2026-07-18T14:32:00.800Z ERROR [inventory] commit failed request_id=req_7f2a15 reason=oversold_inventory sku=FLAGSHIP-001 on_hand=0 requested=1 reservation=rsv_18cc7be404 order=ord_88514
+2026-07-18T14:32:00.869Z ERROR [inventory] commit failed request_id=req_7f2a16 reason=oversold_inventory sku=FLAGSHIP-001 on_hand=0 requested=1 reservation=rsv_9e2143da7f order=ord_88515
+
+2026-07-18T14:32:00.880Z INFO [inventory] release ok request_id=req_7f2a14 reservation=rsv_ba55d29e60
+2026-07-18T14:32:00.882Z INFO [inventory] release ok request_id=req_7f2a15 reservation=rsv_18cc7be404
+2026-07-18T14:32:00.884Z INFO [inventory] release ok request_id=req_7f2a16 reservation=rsv_9e2143da7f
+
+2026-07-18T14:33:00.004Z INFO [inventory] audit sku=FLAGSHIP-001 on_hand=0 held=0 committed=3 available=0
+
+# The 14:33 audit looks clean. The failed holds were released, so by the time
+# the cron ran the numbers reconciled. This is why the on-call engineer could
+# not find anything wrong after the fact.
+
+2026-07-18T14:32:41.320Z INFO [inventory] reserve ok request_id=req_7f2a31 order=ord_88602 sku=CABLE-9 qty=1 reservation=rsv_77bd0e3311
+2026-07-18T14:32:42.296Z INFO [inventory] commit ok request_id=req_7f2a31 order=ord_88602 sku=CABLE-9 reservation=rsv_77bd0e3311
+2026-07-18T14:32:55.210Z INFO [inventory] reserve ok request_id=req_7f2a34 order=ord_88618 sku=HEADSET-77 qty=1 reservation=rsv_2d90fa6b18
+2026-07-18T14:32:57.151Z INFO [inventory] release ok request_id=req_7f2a34 reservation=rsv_2d90fa6b18
+
+# ---- Second window, 14:47Z. Note the timestamps on the three reserves. ----
+
+2026-07-18T14:47:12.000Z INFO [inventory] audit sku=HEADSET-77 on_hand=25 held=0 committed=0 available=25
+2026-07-18T14:47:12.571Z INFO [inventory] reserve ok request_id=req_81cd02 order=ord_89330 sku=HEADSET-77 qty=10 reservation=rsv_5a0e17bc42
+2026-07-18T14:47:12.574Z INFO [inventory] reserve ok request_id=req_81cd03 order=ord_89331 sku=HEADSET-77 qty=10 reservation=rsv_e6c9481f7d
+2026-07-18T14:47:12.578Z INFO [inventory] reserve ok request_id=req_81cd04 order=ord_89332 sku=HEADSET-77 qty=10 reservation=rsv_3fb01ad8e9
+2026-07-18T14:47:12.906Z INFO [inventory] commit ok request_id=req_81cd02 order=ord_89330 sku=HEADSET-77 reservation=rsv_5a0e17bc42
+2026-07-18T14:47:12.961Z INFO [inventory] commit ok request_id=req_81cd03 order=ord_89331 sku=HEADSET-77 reservation=rsv_e6c9481f7d
+2026-07-18T14:47:13.018Z ERROR [inventory] commit failed request_id=req_81cd04 reason=oversold_inventory sku=HEADSET-77 on_hand=5 requested=10 reservation=rsv_3fb01ad8e9 order=ord_89332
+2026-07-18T14:47:13.030Z INFO [inventory] release ok request_id=req_81cd04 reservation=rsv_3fb01ad8e9
+
+# ---- Quiet traffic, same day, one order at a time. Zero failures. ----
+
+2026-07-18T15:04:18.110Z INFO [inventory] reserve ok request_id=req_82ff01 order=ord_89500 sku=HEADSET-77 qty=1 reservation=rsv_ba7710dd05
+2026-07-18T15:04:18.402Z INFO [inventory] commit ok request_id=req_82ff01 order=ord_89500 sku=HEADSET-77 reservation=rsv_ba7710dd05
+2026-07-18T15:06:55.883Z WARNING [inventory] reserve rejected request_id=req_82ff09 order=ord_89512 sku=FLAGSHIP-001 requested=1 available=0
+2026-07-18T15:08:31.442Z WARNING [inventory] reserve rejected request_id=req_82ff11 order=ord_89514 sku=FLAGSHIP-001 requested=1 available=0
+
+# When requests arrive one at a time, the out_of_stock rejection works exactly
+# as designed. The rejection path is not broken.

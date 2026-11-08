@@ -1,0 +1,18 @@
+# Core dependencies
+# anthropic stays on 0.x: 1.x removed the temperature argument the agents pass
+# to messages.create() (it raises TypeError there), and releases before 0.40
+# fail against current httpx. See the README's Prerequisites.
+anthropic>=0.40.0,<1.0
+redis>=5.0.1,<9.0        # provides redis.asyncio; the separate aioredis package is not needed
+pydantic>=2.5.0,<3.0
+pydantic-settings>=2.0.0,<3.0
+python-dotenv>=1.0.0,<2.0
+
+# Testing
+pytest>=7.4.0,<10.0
+pytest-asyncio>=0.21.0,<2.0
+pytest-cov>=4.1.0,<8.0
+
+# Optional: formatting and linting
+black>=23.0.0,<27.0
+ruff>=0.1.0,<1.0

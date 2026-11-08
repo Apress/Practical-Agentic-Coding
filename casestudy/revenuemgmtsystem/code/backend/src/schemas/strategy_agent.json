@@ -1,0 +1,85 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Strategy Agent Action Group",
+        "version": "1.0.0",
+        "description": "API for the Strategy Agent to record actionable insights and recommendations."
+    },
+    "paths": {
+        "/insights": {
+            "post": {
+                "summary": "Create Actionable Insight",
+                "description": "Records a new strategic insight or recommendation into the system.",
+                "operationId": "createActionableInsight",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "description": "Type of insight e.g., HIGH_DEMAND, DISTRESSED_PERIOD",
+                                        "enum": [
+                                            "HIGH_DEMAND",
+                                            "DISTRESSED_PERIOD",
+                                            "COMPETITOR_MATCH",
+                                            "GROUP_DISPLACEMENT",
+                                            "CANCELLATION_WATCH",
+                                            "SHOULDER_NIGHT"
+                                        ]
+                                    },
+                                    "suggestedAction": {
+                                        "type": "string",
+                                        "description": "The recommended action to take."
+                                    },
+                                    "reasoning": {
+                                        "type": "string",
+                                        "description": "Explanation for the recommendation."
+                                    },
+                                    "predictedRevenueImpact": {
+                                        "type": "number",
+                                        "description": "Estimated revenue impact in USD."
+                                    },
+                                    "targetDate": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "description": "The date this insight applies to."
+                                    }
+                                },
+                                "required": [
+                                    "type",
+                                    "suggestedAction",
+                                    "targetDate"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Insight created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "insightId": {
+                                            "type": "string",
+                                            "description": "Unique ID of the created insight"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "description": "Current status (e.g., PENDING)"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

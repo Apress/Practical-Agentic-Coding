@@ -1,0 +1,340 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/agent-decision-log.json",
+  "title": "Agent Decision Log Entry",
+  "description": "Schema for immutable logging of agent decisions (AGILITY Framework - Governance pillar)",
+  "type": "object",
+  "required": [
+    "log_id",
+    "timestamp",
+    "agent_id",
+    "session_id",
+    "action",
+    "signature"
+  ],
+  "properties": {
+    "log_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this log entry"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the decision was made"
+    },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^urn:agent:[a-z0-9-]+(-v[0-9.]+)?$",
+      "description": "URN identifier of the agent",
+      "examples": ["urn:agent:code-reviewer-v1.2.3"]
+    },
+    "session_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identifier for the agent session"
+    },
+    "action": {
+      "type": "object",
+      "required": ["type", "target"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "file_read",
+            "file_write",
+            "file_delete",
+            "command_execute",
+            "api_call",
+            "database_query",
+            "tool_invoke",
+            "agent_handoff"
+          ],
+          "description": "Type of action taken"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target of the action (file path, command, URL, etc.)"
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Additional parameters for the action",
+          "additionalProperties": true
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Context that led to this decision",
+      "properties": {
+        "user_request": {
+          "type": "string",
+          "description": "Original user request or ticket"
+        },
+        "preceding_actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Log IDs of actions that preceded this one"
+        },
+        "files_in_context": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Files the agent had access to"
+        }
+      }
+    },
+    "reasoning": {
+      "type": "object",
+      "description": "Explanation of why this decision was made",
+      "properties": {
+        "summary": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Brief human-readable summary"
+        },
+        "chain": {
+          "type": "array",
+          "description": "Step-by-step reasoning chain",
+          "items": {
+            "type": "object",
+            "required": ["step", "observation", "conclusion"],
+            "properties": {
+              "step": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "observation": {
+                "type": "string"
+              },
+              "conclusion": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "alternatives_considered": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "option": {
+                "type": "string"
+              },
+              "rejected_because": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Agent's confidence in this decision (0-1)"
+    },
+    "risk_assessment": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "factors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Factors contributing to risk level"
+        },
+        "mitigations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Mitigations applied"
+        }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["success", "failure", "partial", "blocked", "pending_approval"]
+        },
+        "result_summary": {
+          "type": "string",
+          "description": "Summary of the outcome"
+        },
+        "files_affected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "operation": {
+                "type": "string",
+                "enum": ["created", "modified", "deleted", "read"]
+              },
+              "lines_changed": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "stack_trace": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "description": "Human approval information if required",
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected", "not_required"]
+        },
+        "approver": {
+          "type": "string",
+          "description": "Email of the approver"
+        },
+        "approved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "comments": {
+          "type": "string"
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Performance and cost metrics",
+      "properties": {
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tokens_used": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "estimated_cost_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "api_calls": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "signature": {
+      "type": "string",
+      "description": "Cryptographic signature for tamper detection (SHA-256 of log content)",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "previous_log_hash": {
+      "type": "string",
+      "description": "Hash of the previous log entry (blockchain-style chaining)",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  },
+  "examples": [
+    {
+      "log_id": "550e8400-e29b-41d4-a716-446655440001",
+      "timestamp": "2025-01-15T10:30:00Z",
+      "agent_id": "urn:agent:code-reviewer-v1.2.3",
+      "session_id": "550e8400-e29b-41d4-a716-446655440000",
+      "action": {
+        "type": "file_write",
+        "target": "/app/src/services/order.py",
+        "parameters": {
+          "lines_added": 15,
+          "lines_removed": 3
+        }
+      },
+      "context": {
+        "user_request": "Fix the AttributeError on orders with no customer in order processing",
+        "files_in_context": [
+          "/app/src/services/order.py",
+          "/app/tests/test_order.py"
+        ]
+      },
+      "reasoning": {
+        "summary": "Added a None check before accessing order.customer to prevent an AttributeError",
+        "chain": [
+          {
+            "step": 1,
+            "observation": "Traceback shows AttributeError at order.py line 45",
+            "conclusion": "order.customer can be None in some cases"
+          },
+          {
+            "step": 2,
+            "observation": "Customer is optional when order is in 'draft' state",
+            "conclusion": "Need a None check before accessing customer attributes"
+          }
+        ],
+        "alternatives_considered": [
+          {
+            "option": "Make customer required in model",
+            "rejected_because": "Would break existing draft orders in database"
+          }
+        ]
+      },
+      "confidence": 0.95,
+      "risk_assessment": {
+        "level": "low",
+        "factors": ["Simple None check", "No business logic change"],
+        "mitigations": ["Added unit test for edge case"]
+      },
+      "outcome": {
+        "status": "success",
+        "result_summary": "Fix applied successfully, all tests passing",
+        "files_affected": [
+          {
+            "path": "/app/src/services/order.py",
+            "operation": "modified",
+            "lines_changed": 12
+          }
+        ]
+      },
+      "approval": {
+        "required": false,
+        "status": "not_required"
+      },
+      "metrics": {
+        "duration_ms": 1500,
+        "tokens_used": 2500,
+        "estimated_cost_usd": 0.025,
+        "api_calls": 3
+      },
+      "signature": "sha256:a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
+      "previous_log_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

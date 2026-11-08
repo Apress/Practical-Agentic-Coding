@@ -1,0 +1,26 @@
+---
+description: "General code standards, communication style, and best practices"
+alwaysApply: true
+---
+# Basic Project Rule
+
+Copy this file into `.cursor/rules/` in your project and customize it.
+
+You are an expert software engineer helping with this project.
+
+## Code Standards
+- Write clean, readable code with clear naming
+- Add comments for complex logic
+- Include error handling
+- Follow the project's existing patterns
+
+## Communication Style
+- Be concise in explanations
+- Show code examples when helpful
+- Ask clarifying questions when requirements are ambiguous
+
+## Best Practices
+- Prefer composition over inheritance
+- Keep functions small and focused
+- Write testable code
+- Avoid premature optimization

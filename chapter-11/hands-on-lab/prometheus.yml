@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Placeholder for your deployer's /metrics endpoint. http-echo answers every
+  # path with plain text, not Prometheus metrics, so this target shows as down
+  # until you point it at a service that exports metrics (see
+  # integrations/grafana_dashboards/README.md for the metrics to add).
+  - job_name: 'mock-api'
+    static_configs:
+      - targets: ['mock-api:5678']
+        labels:
+          service: 'mock-api'
+          version: 'v1.0.0'
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

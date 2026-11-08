@@ -1,0 +1,55 @@
+# Image tags are pinned so the stack behaves the same on every pull.
+services:
+  # Mock API service for deployment testing. No healthcheck: the image holds
+  # only the http-echo binary (no shell, no wget), so an in-container check
+  # cannot run. Check it from the host instead: curl http://localhost:5678
+  mock-api:
+    image: hashicorp/http-echo:0.2.3
+    command: ["-text", "Mock API v1.0.0 - Healthy"]
+    ports:
+      - "5678:5678"
+    networks:
+      - lab-network
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:v3.13.5
+    # 127.0.0.1 keeps this service off your network. If WSL cannot reach it
+    # through Docker Desktop, see Troubleshooting in the README.
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - lab-network
+    depends_on:
+      - mock-api
+
+  # Grafana for metrics visualization (optional)
+  grafana:
+    image: grafana/grafana:12.4.14
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./integrations/grafana_dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - lab-network
+    depends_on:
+      - prometheus
+
+networks:
+  lab-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:

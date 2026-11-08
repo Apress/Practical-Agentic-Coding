@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Document Generator",
+  "description": "Generates complete documentation for file changes - from Exercise 5.1 in Chapter 5",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.py",
+      "src/**/*.js",
+      "src/**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Generate complete documentation for the current file:\n\n1. **Extract Signatures**\n   - Function and class signatures\n   - Method definitions\n   - Module-level constants and variables\n\n2. **Document Parameters**\n   - Parameter names and types\n   - Return types\n   - Default values\n   - Optional vs required parameters\n\n3. **Provide Examples**\n   - Usage examples based on existing code\n   - Common use cases\n   - Edge case handling\n\n4. **Update README**\n   - Add any new exports to the README.md\n   - Update import examples\n   - Document any new public API\n\n5. **Follow Standards**\n   - Ensure documentation follows project standards\n   - Use consistent formatting\n   - Include docstrings in Google style format"
+  }
+}

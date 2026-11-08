@@ -1,0 +1,227 @@
+# =============================================================================
+# GitHub Actions: AI-Powered Code Review with the Antigravity CLI (agy)
+# Chapter 6: Intent-First Development
+# =============================================================================
+#
+# The same agent that works interactively runs non-interactively in
+# automation. The CI pattern is:
+#
+#   agy -p "..." --dangerously-skip-permissions --sandbox
+#
+#   -p              print mode: one prompt in, one answer out, exit;
+#                   runs headless, so nothing waits on a TTY
+#   --dangerously-skip-permissions
+#                   auto-approves tool permission requests, because no
+#                   human is present; prefer scoped permissions.allow
+#                   rules in settings when the job needs only a few tools
+#                   As of November 7, 2026 (agy 1.5.2 and later), the flag
+#                   blocks commands on agy's system command denylist
+#                   instead of approving them. In -p runs on a Gemini
+#                   Enterprise account, it also denies terminal commands
+#                   or file access outside the workspace that your
+#                   administrator requires to be reviewed.
+#   --print-timeout caps how long a -p run may take. As of November 7,
+#                   2026 (agy 1.5.0 and later), -p without it waits for
+#                   background tasks with no time limit. A run that the
+#                   timeout cuts short prints an AGY_ERROR line and exits
+#                   with code 3, which fails the step.
+#   --sandbox       contains what an auto-approved agent can touch
+#                   As of November 7, 2026 (agy 1.4.4 and later), --sandbox
+#                   does nothing where the terminal sandbox is unavailable,
+#                   such as Linux hosts that block unprivileged user
+#                   namespaces. Ubuntu 24.04, which ubuntu-latest runs,
+#                   restricts them by default, so expect the skip flag to
+#                   approve every tool call there with no sandbox, except
+#                   commands on agy's system command denylist, which agy
+#                   1.5.2 and later block. These
+#                   jobs only need git: the safer setup is
+#                   "permissions": {"allow": ["command(git)"]} in the
+#                   settings.json written below, without the skip flag.
+#
+# Note: a tool call that cannot get an approval is soft-denied, and the
+# run still exits zero with only a notice on stderr, so a review that
+# silently skipped checks can look like a passing one.
+#
+# Authentication in CI uses a GEMINI_API_KEY environment variable paired
+# with "modelProvider": "gemini" in ~/.gemini/antigravity-cli/settings.json.
+# The key alone has no effect; an unauthenticated run exits with an error.
+#
+# Required secret:
+# - GEMINI_API_KEY: a Gemini API key for headless runs
+#
+# Flags and automation options change between releases; verify against
+# antigravity.google/docs/cli/headless and `agy changelog` before wiring CI.
+# =============================================================================
+
+name: AI Code Review
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: AI Code Review
+  # ---------------------------------------------------------------------------
+  ai-review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    # The default GITHUB_TOKEN is read-only in most repositories; posting the
+    # review comment needs write access to pull requests.
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Antigravity CLI
+        run: |
+          curl -fsSL https://antigravity.google/cli/install.sh | bash
+          # The installer prints where it put the binary. Add that directory to
+          # PATH for later steps; confirm the location against the installer
+          # output for your version rather than assuming this one.
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          # Headless auth: GEMINI_API_KEY only takes effect with this setting.
+          mkdir -p ~/.gemini/antigravity-cli
+          echo '{"modelProvider": "gemini"}' > ~/.gemini/antigravity-cli/settings.json
+
+      - name: AI Code Review
+        id: review
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          # --print-timeout caps the run; a run it cuts short exits with code 3.
+          agy -p "Review the diff between this branch and main. Flag \
+          security issues, missing error handling, and style violations. \
+          If any issue is critical, start the report with the word CRITICAL. \
+          Output the findings as markdown." \
+          --dangerously-skip-permissions --sandbox --print-timeout 10m > review.md
+
+          if grep -qi "^CRITICAL" review.md; then
+            echo "critical_issues=true" >> $GITHUB_OUTPUT
+          else
+            echo "critical_issues=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Review Comment
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const review = fs.readFileSync('review.md', 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## AI Code Review\n\n${review}`
+            });
+
+      - name: Fail on Critical Issues
+        if: steps.review.outputs.critical_issues == 'true'
+        run: |
+          echo "Critical issues found in code review!"
+          cat review.md
+          exit 1
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Security Audit
+  # ---------------------------------------------------------------------------
+  security-audit:
+    name: AI Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install Antigravity CLI
+        run: |
+          curl -fsSL https://antigravity.google/cli/install.sh | bash
+          # The installer prints where it put the binary. Add that directory to
+          # PATH for later steps; confirm the location against the installer
+          # output for your version rather than assuming this one.
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          # Headless auth: GEMINI_API_KEY only takes effect with this setting.
+          mkdir -p ~/.gemini/antigravity-cli
+          echo '{"modelProvider": "gemini"}' > ~/.gemini/antigravity-cli/settings.json
+
+      - name: Run Security Audit
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          # --print-timeout caps the run; a run it cuts short exits with code 3.
+          agy -p "Act as a security auditor. Scan the src directory for: \
+          hardcoded secrets or API keys, SQL injection, XSS, insecure \
+          dependencies, missing input validation, and authentication or \
+          authorization issues. If any finding is critical, start the \
+          report with the word CRITICAL. Report findings with severity \
+          levels as markdown." \
+          --dangerously-skip-permissions --sandbox --print-timeout 10m > security-audit.md
+
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v7
+        with:
+          name: security-audit
+          path: security-audit.md
+
+      - name: Check for Critical Security Issues
+        run: |
+          # Match only the leading CRITICAL marker the prompt asks for; a plain
+          # "critical" search would also match "No critical issues found".
+          if grep -q "^CRITICAL" security-audit.md; then
+            echo "Critical security issues found!"
+            cat security-audit.md
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Job 3: Generate Changelog
+  # ---------------------------------------------------------------------------
+  changelog:
+    name: Generate Changelog
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Antigravity CLI
+        run: |
+          curl -fsSL https://antigravity.google/cli/install.sh | bash
+          # The installer prints where it put the binary. Add that directory to
+          # PATH for later steps; confirm the location against the installer
+          # output for your version rather than assuming this one.
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          # Headless auth: GEMINI_API_KEY only takes effect with this setting.
+          mkdir -p ~/.gemini/antigravity-cli
+          echo '{"modelProvider": "gemini"}' > ~/.gemini/antigravity-cli/settings.json
+
+      - name: Generate Changelog Entry
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          # --print-timeout caps the run; a run it cuts short exits with code 3.
+          agy -p "Look at the git log since the most recent tag (or the \
+          last 20 commits if no tag exists) and generate a changelog entry \
+          in conventional changelog format with Added, Changed, Fixed, and \
+          Removed sections. Be concise but descriptive." \
+          --dangerously-skip-permissions --sandbox --print-timeout 10m > new-changelog.md
+
+          cat new-changelog.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Changelog
+        uses: actions/upload-artifact@v7
+        with:
+          name: changelog
+          path: new-changelog.md

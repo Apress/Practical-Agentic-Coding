@@ -1,0 +1,39 @@
+{
+  "mcpServers": {
+    "github-manager": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer REDACTED_USE_ENV_VAR"
+      }
+    },
+    "secure-database": {
+      "command": "npx",
+      "args": ["-y", "@toolbox-sdk/server", "--prebuilt=postgres", "--stdio"],
+      "env": {
+        "POSTGRES_HOST": "internal-db",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DATABASE": "analytics",
+        "POSTGRES_USER": "read_only_user",
+        "POSTGRES_PASSWORD": "REDACTED_USE_ENV_VAR"
+      }
+    },
+    "project-filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/var/app/current_project",
+        "/var/app/shared_libraries"
+      ]
+    },
+    "slack-comms": {
+      "command": "npx",
+      "args": ["-y", "@zencoderai/slack-mcp-server"],
+      "env": {
+        "SLACK_BOT_TOKEN": "REDACTED_USE_ENV_VAR",
+        "SLACK_TEAM_ID": "REDACTED_USE_ENV_VAR"
+      }
+    }
+  }
+}

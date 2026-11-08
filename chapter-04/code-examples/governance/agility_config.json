@@ -1,0 +1,334 @@
+{
+  "$schema": "https://example.com/schemas/agent-governance.json",
+  "version": "1.0.0",
+  "metadata": {
+    "project": "api-service",
+    "owner": "platform-engineering@example.com",
+    "last_reviewed": "2025-01-15",
+    "review_frequency": "quarterly"
+  },
+  "agility": {
+    "accountability": {
+      "human_sponsor": {
+        "name": "Jane Smith",
+        "role": "Principal Engineer",
+        "email": "jane.smith@example.com",
+        "escalation_phone": "+1-555-0123"
+      },
+      "backup_sponsor": {
+        "name": "John Doe",
+        "role": "Staff Engineer",
+        "email": "john.doe@example.com"
+      },
+      "approval_requirements": {
+        "code_changes": {
+          "standard": "agent",
+          "security_related": "security_team",
+          "production_deploy": "sponsor"
+        },
+        "database_changes": "dual_approval",
+        "financial_transactions": {
+          "under_100_usd": "agent",
+          "under_1000_usd": "sponsor",
+          "over_1000_usd": "finance_team"
+        }
+      },
+      "liability": {
+        "acceptance": "Human sponsor accepts ultimate liability for agent actions",
+        "insurance": "covered_under_company_policy",
+        "incident_response_time_minutes": 5
+      }
+    },
+
+    "governance": {
+      "logging": {
+        "level": "comprehensive",
+        "retention_days": 90,
+        "immutable": true,
+        "storage": "append_only_database",
+        "fields": [
+          "timestamp",
+          "agent_id",
+          "session_id",
+          "action_type",
+          "input_summary",
+          "output_summary",
+          "reasoning_chain",
+          "confidence_score",
+          "files_affected",
+          "human_override",
+          "checksum"
+        ],
+        "encryption": {
+          "at_rest": true,
+          "in_transit": true,
+          "algorithm": "AES-256-GCM"
+        }
+      },
+      "monitoring": {
+        "anomaly_detection": {
+          "enabled": true,
+          "model": "isolation_forest",
+          "sensitivity": 0.95
+        },
+        "resource_limits": {
+          "max_api_calls_per_hour": 1000,
+          "max_cost_per_day_usd": 100,
+          "max_files_modified_per_session": 50,
+          "max_lines_changed_per_file": 500,
+          "max_runtime_minutes": 30
+        },
+        "alerts": {
+          "policy_violation": {
+            "severity": "critical",
+            "notification": "immediate",
+            "channels": ["slack", "email", "pagerduty"]
+          },
+          "resource_threshold_80_percent": {
+            "severity": "warning",
+            "notification": "batched",
+            "channels": ["slack"]
+          },
+          "unusual_behavior": {
+            "severity": "info",
+            "notification": "daily_digest",
+            "channels": ["email"]
+          }
+        }
+      },
+      "policies": {
+        "code_review_required": true,
+        "test_coverage_minimum": 85,
+        "security_scan_on_change": true
+      }
+    },
+
+    "integrity": {
+      "agent_identity": {
+        "id": "urn:agent:code-reviewer-v1.2.3",
+        "_checksum_comment": "Example value only (the SHA-256 of the id string). In practice this is the digest of the agent's signed release artifact; it must match decision_log_schema.json's pattern ^sha256:[a-f0-9]{64}$.",
+        "checksum": "sha256:a0c164705e40546352c50bd004fba4944698e29ae81f8b96f9db2385fe1b37c8",
+        "signed_by": "platform-engineering@example.com",
+        "certificate": "/certs/agent-signing.pem",
+        "created_at": "2025-01-10T10:00:00Z"
+      },
+      "model_provenance": {
+        "_comment": "Pin the exact model IDs your agent is approved to run. Replace the placeholders below with the current IDs from your provider, and re-approve when you change them: a model swap changes the agent's behavior even when no code changed.",
+        "model_id": "REPLACE_WITH_APPROVED_MODEL_ID",
+        "provider": "REPLACE_WITH_PROVIDER",
+        "version_locked": true,
+        "allowed_models": [
+          "REPLACE_WITH_APPROVED_MODEL_ID",
+          "REPLACE_WITH_APPROVED_FALLBACK_MODEL_ID"
+        ]
+      },
+      "data_verification": {
+        "input_validation": true,
+        "output_sanitization": true,
+        "integrity_checks_on_startup": true,
+        "checksum_verification": "sha256"
+      },
+      "supply_chain": {
+        "dependencies_pinned": true,
+        "vulnerability_scanning": "continuous",
+        "sbom_generated": true
+      }
+    },
+
+    "limitations": {
+      "filesystem": {
+        "allowed_paths": [
+          "/app/src",
+          "/app/tests",
+          "/app/docs"
+        ],
+        "prohibited_paths": [
+          "/infrastructure",
+          "/security",
+          "/billing",
+          "/.env*",
+          "/**/secrets/**",
+          "/**/*.pem",
+          "/**/*.key"
+        ],
+        "read_only_paths": [
+          "/app/config",
+          "/shared-libs"
+        ]
+      },
+      "operations": {
+        "allowed_commands": [
+          "pytest",
+          "make format",
+          "make lint",
+          "make test",
+          "git status",
+          "git diff"
+        ],
+        "prohibited_commands": [
+          "rm -rf",
+          "DROP TABLE",
+          "DELETE FROM",
+          "curl",
+          "wget"
+        ],
+        "require_approval": [
+          "git push",
+          "alembic upgrade",
+          "deploy"
+        ]
+      },
+      "network": {
+        "allowed_hosts": [
+          "api.github.com",
+          "pypi.org"
+        ],
+        "prohibited_hosts": [
+          "*"
+        ],
+        "max_request_size_mb": 10
+      },
+      "resource_caps": {
+        "max_memory_mb": 1024,
+        "max_cpu_percent": 50,
+        "max_disk_write_mb": 100
+      }
+    },
+
+    "intervention": {
+      "emergency_stop": {
+        "enabled": true,
+        "methods": [
+          {
+            "type": "api",
+            "endpoint": "/api/v1/agents/{agent_id}/stop",
+            "auth": "admin_token",
+            "timeout_ms": 1000
+          },
+          {
+            "type": "cli",
+            "command": "agent-ctl stop --agent-id {agent_id} --force",
+            "timeout_ms": 500
+          },
+          {
+            "type": "ui",
+            "location": "Dashboard > Agents > Kill Switch"
+          }
+        ],
+        "fallback": "kill_process",
+        "notify_on_trigger": ["sponsor", "ops_team"]
+      },
+      "access_control": {
+        "principle": "least_privilege",
+        "permission_escalation": "requires_sponsor_approval",
+        "temporary_permissions": {
+          "max_duration_minutes": 60,
+          "audit_required": true,
+          "auto_revoke": true
+        }
+      },
+      "circuit_breaker": {
+        "enabled": true,
+        "failure_threshold": 5,
+        "reset_timeout_seconds": 300,
+        "half_open_requests": 3
+      },
+      "rollback": {
+        "automatic_on_failure": true,
+        "max_rollback_time_minutes": 5,
+        "checkpoint_frequency": "per_operation"
+      }
+    },
+
+    "transparency": {
+      "explainability": {
+        "enabled": true,
+        "detail_level": "comprehensive",
+        "format": "structured_json",
+        "include": [
+          "reasoning_chain",
+          "confidence_scores",
+          "alternatives_considered",
+          "risk_assessment",
+          "sources_consulted"
+        ],
+        "human_readable_summary": true
+      },
+      "audit_trail": {
+        "retention_days": 365,
+        "immutable": true,
+        "searchable": true,
+        "indexed_fields": [
+          "agent_id",
+          "action_type",
+          "timestamp",
+          "files_affected"
+        ],
+        "exportable": ["json", "csv", "pdf"]
+      },
+      "reporting": {
+        "frequency": "weekly",
+        "recipients": ["sponsor", "compliance_team"],
+        "includes": [
+          "actions_taken",
+          "errors_encountered",
+          "human_overrides",
+          "policy_violations"
+        ]
+      }
+    },
+
+    "youth": {
+      "continuous_improvement": {
+        "feedback_loops": {
+          "user_feedback": true,
+          "automated_quality_checks": true,
+          "performance_monitoring": true,
+          "A_B_testing": false
+        },
+        "learning_from_corrections": {
+          "enabled": true,
+          "requires_review": true
+        }
+      },
+      "update_pipeline": {
+        "stages": ["dev", "staging", "canary", "production"],
+        "approval_required": {
+          "dev_to_staging": "automated",
+          "staging_to_canary": "automated",
+          "canary_to_production": "human"
+        },
+        "testing_requirements": {
+          "unit_tests": true,
+          "integration_tests": true,
+          "regression_tests": true,
+          "security_scan": true
+        },
+        "canary": {
+          "traffic_percentage": 5,
+          "duration_hours": 24,
+          "success_criteria": {
+            "error_rate_max": 0.01,
+            "latency_p99_max_ms": 5000
+          }
+        },
+        "rollback": {
+          "automatic_on_failure": true,
+          "max_rollback_time_minutes": 5
+        }
+      },
+      "model_updates": {
+        "frequency": "monthly",
+        "testing_required": true,
+        "regression_threshold": 0.95,
+        "approval": "security_team",
+        "changelog_required": true
+      },
+      "policy_updates": {
+        "review_frequency": "quarterly",
+        "approval": "compliance_team",
+        "version_controlled": true
+      }
+    }
+  }
+}

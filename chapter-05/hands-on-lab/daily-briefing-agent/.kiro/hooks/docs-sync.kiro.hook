@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Documentation Sync",
+  "description": "Updates project documentation when source code changes - triggered manually to avoid noise",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review recent source code changes and update documentation accordingly:\n\n1. **README.md Updates**\n   - Update feature list if new capabilities added\n   - Update setup instructions if dependencies changed\n   - Update usage examples if API changed\n   - Verify all code examples still work\n\n2. **API Documentation (docs/api.md)**\n   - Document any new API endpoints\n   - Update request/response examples\n   - Note any deprecated endpoints\n   - Update error code documentation\n\n3. **Inline Documentation**\n   - Ensure all new public functions have docstrings\n   - Update docstrings for modified functions\n   - Follow Google-style docstring format\n   - Include Args, Returns, Raises sections\n\n4. **Configuration Documentation**\n   - Update .env.example if new env vars added\n   - Document any new configuration options\n   - Update infrastructure documentation if AWS resources changed\n\n5. **Spec Document Updates**\n   - Flag if code changes may require spec updates\n   - Note any implementation deviations from design\n\nMaintain consistency with the writing style established in existing documentation."
+  }
+}

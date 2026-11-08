@@ -1,0 +1,163 @@
+{
+  "description": "GitHub MCP Server Configuration (GitHub's official server; the archived @modelcontextprotocol/server-github is deprecated)",
+  "documentation": "https://github.com/github/github-mcp-server",
+
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PAT}"
+      }
+    }
+  },
+
+  "docker_alternative": {
+    "_comment": "GitHub also ships the server as a Docker image for local or GitHub Enterprise use.",
+    "github": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}"
+      }
+    }
+  },
+
+  "available_tools": {
+    "search_repositories": {
+      "description": "Search for repositories",
+      "example_prompts": [
+        "Search for repositories related to 'machine learning python'",
+        "Find popular TypeScript projects"
+      ]
+    },
+    "get_file_contents": {
+      "description": "Read file contents from a repository",
+      "example_prompts": [
+        "Get the contents of README.md from owner/repo",
+        "Read the package.json file"
+      ]
+    },
+    "list_commits": {
+      "description": "List commits in a repository",
+      "example_prompts": [
+        "Show recent commits on the main branch",
+        "What changes were made in the last week?"
+      ]
+    },
+    "issue_write": {
+      "description": "Create or update an issue",
+      "example_prompts": [
+        "Create an issue for the bug we found",
+        "Open a feature request issue"
+      ]
+    },
+    "list_issues": {
+      "description": "List issues in a repository",
+      "example_prompts": [
+        "Show open issues in the repository",
+        "Find issues with the 'bug' label"
+      ]
+    },
+    "list_pull_requests": {
+      "description": "List pull requests",
+      "example_prompts": [
+        "Show open pull requests",
+        "List PRs awaiting review"
+      ]
+    },
+    "pull_request_read": {
+      "description": "Get details of a specific PR",
+      "example_prompts": [
+        "Get details of PR #123",
+        "What changes are in the open PR?"
+      ]
+    }
+  },
+
+  "token_setup": {
+    "description": "How to create a GitHub Personal Access Token",
+    "steps": [
+      "1. Go to GitHub Settings > Developer settings > Personal access tokens",
+      "2. Click 'Generate new token (classic)' or use fine-grained tokens",
+      "3. Select required scopes based on your needs",
+      "4. Copy the token and set it as the GITHUB_PAT environment variable"
+    ],
+    "classic_token_scopes": {
+      "_comment": "Classic scopes are coarse: public_repo already grants write access to public repositories, and there is no read-only classic scope for private ones. For read-only work, prefer a fine-grained token with read-only repository permissions.",
+      "full_access": ["repo", "read:org"]
+    }
+  },
+
+  "environment_setup": {
+    "bash": "export GITHUB_PAT='ghp_your_token_here'",
+    "zsh": "export GITHUB_PAT='ghp_your_token_here'",
+    "powershell": "$env:GITHUB_PAT='ghp_your_token_here'",
+    "dotenv": "GITHUB_PAT=ghp_your_token_here"
+  },
+
+  "security_recommendations": {
+    "use_fine_grained_tokens": {
+      "description": "Fine-grained tokens provide better security with limited scope",
+      "benefits": [
+        "Repository-specific access",
+        "Read-only options",
+        "Automatic expiration",
+        "Detailed permission control"
+      ]
+    },
+    "rotate_tokens": {
+      "description": "Rotate tokens regularly",
+      "recommended_interval": "90 days"
+    },
+    "limit_repository_access": {
+      "description": "Only grant access to repositories Claude needs"
+    }
+  },
+
+  "example_workflows": {
+    "code_review": {
+      "description": "Review PR changes and create issues for problems",
+      "prompts": [
+        "Get the diff for PR #123 and review for security issues",
+        "Create an issue if any vulnerabilities are found"
+      ]
+    },
+    "documentation_update": {
+      "description": "Check and update documentation",
+      "prompts": [
+        "Read the README.md and compare with current code structure",
+        "Suggest documentation updates based on recent changes"
+      ]
+    },
+    "issue_triage": {
+      "description": "Help triage and categorize issues",
+      "prompts": [
+        "List open issues without labels",
+        "Suggest appropriate labels based on issue content"
+      ]
+    }
+  },
+
+  "permissions_example": {
+    "_comment": "MCP tool permissions use the form mcp__<server>__<tool>. Tool names vary by server version; run /mcp in a session to list what the connected server actually exposes before pinning rules to names. As of November 7, 2026, GitHub's default tool set creates and updates issues with issue_write and reads pull requests with pull_request_read; create_issue appears only when the opt-in issues_granular feature flag is on, so the deny list names both. To rule out writes entirely, connect to https://api.githubcopilot.com/mcp/readonly instead (or set GITHUB_READ_ONLY=1 for the Docker image).",
+    "allow": [
+      "mcp__github__search_repositories",
+      "mcp__github__get_file_contents",
+      "mcp__github__list_commits",
+      "mcp__github__list_issues",
+      "mcp__github__list_pull_requests",
+      "mcp__github__pull_request_read"
+    ],
+    "deny": [
+      "mcp__github__issue_write",
+      "mcp__github__create_issue",
+      "mcp__github__create_pull_request",
+      "mcp__github__merge_pull_request"
+    ]
+  }
+}

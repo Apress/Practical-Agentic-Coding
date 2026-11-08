@@ -1,0 +1,124 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Execution Agent Action Group",
+        "version": "1.0.0",
+        "description": "API for the Execution Agent to apply changes to rates and inventory."
+    },
+    "paths": {
+        "/rates/update": {
+            "post": {
+                "summary": "Update Room Rate",
+                "description": "Updates the rate for a specific room type on a specific date.",
+                "operationId": "updateRoomRate",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "date": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "roomType": {
+                                        "type": "string"
+                                    },
+                                    "newRate": {
+                                        "type": "number",
+                                        "description": "The new rate amount in USD."
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "description": "Reason for the update (e.g., Executing Strategy Agent Insight)."
+                                    }
+                                },
+                                "required": [
+                                    "date",
+                                    "roomType",
+                                    "newRate"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Rate updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "transactionId": {
+                                            "type": "string"
+                                        },
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/promo": {
+            "post": {
+                "summary": "Launch Promotion",
+                "description": "Activates a promotion for a date range.",
+                "operationId": "launchPromotion",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "startDate": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "endDate": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "promoCode": {
+                                        "type": "string"
+                                    },
+                                    "discountPercent": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "startDate",
+                                    "endDate",
+                                    "promoCode"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Promotion launched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

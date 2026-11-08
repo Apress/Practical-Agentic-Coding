@@ -1,0 +1,24 @@
+services:
+  supportflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: supportflow
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/supportflow.db
+      - API_KEY=demo-key-12345
+      - SQL_ECHO=false
+    volumes:
+      # Bind mount: the SQLite file lives in ./data on the host.
+      # Delete ./data and restart to recreate the schema from scratch.
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      # Stdlib only: requests is not an application dependency.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s

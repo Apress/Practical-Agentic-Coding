@@ -1,0 +1,9 @@
+{
+  "_comment": "Example budget limits for the Chapter 11 cost gate. Copy this to .github/budget-limits.json in your own repository and edit the numbers. Values are estimated monthly USD per category. The reserved 'total' key caps the whole plan.",
+  "total": 3000,
+  "compute": 1000,
+  "storage": 300,
+  "database": 800,
+  "network": 200,
+  "other": 150
+}

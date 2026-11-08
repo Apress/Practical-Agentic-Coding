@@ -1,0 +1,63 @@
+{
+  "mcpServers": {
+    "aws-api": {
+      "command": "uvx",
+      "args": [
+        "awslabs.aws-api-mcp-server@latest"
+      ],
+      "description": "Direct AWS API access for service operations. Requires AWS credentials configured.",
+      "env": {
+        "AWS_REGION": "us-east-1",
+        "AWS_API_MCP_PROFILE_NAME": "default"
+      }
+    },
+    "aws-knowledge": {
+      "url": "https://knowledge-mcp.global.api.aws",
+      "description": "AWS-managed remote server: documentation, regional availability, and architecture guidance. Nothing to install and no AWS credentials needed."
+    },
+    "aws-docs": {
+      "command": "uvx",
+      "args": [
+        "awslabs.aws-documentation-mcp-server@latest"
+      ],
+      "description": "Search and retrieve AWS documentation for services and features."
+    },
+    "aurora-postgres": {
+      "command": "uvx",
+      "args": [
+        "awslabs.postgres-mcp-server@latest"
+      ],
+      "description": "Aurora PostgreSQL and RDS for PostgreSQL. Name the cluster or endpoint in chat when you ask it to connect. Read-only unless you add --allow_write_query to args.",
+      "env": {
+        "AWS_PROFILE": "default",
+        "AWS_REGION": "us-east-1",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    }
+  },
+  "_comments": {
+    "prerequisites": [
+      "AWS CLI configured with valid credentials",
+      "uv installed, for the uvx-launched servers",
+      "aws-knowledge is a remote server: no uv and no AWS credentials needed"
+    ],
+    "regions": [
+      "Change 'us-east-1' to your preferred region",
+      "Ensure services (like Bedrock) are available in selected region"
+    ],
+    "windows": [
+      "AWS documents a different launch form on Windows: command 'uv' with args ['tool', 'run', '--from', '<package>@latest', '<package>.exe']; see each server's page at awslabs.github.io/mcp"
+    ],
+    "superseded": [
+      "As of November 7, 2026, AWS lists awslabs.aws-api-mcp-server as superseded by the managed AWS MCP Server. AWS's SigV4 entry for Kiro: command uvx, args mcp-proxy-for-aws-cli@latest https://aws-mcp.us-east-1.api.aws/mcp --metadata AWS_REGION=us-east-1 (needs local AWS credentials). If you switch, remove the aws-api and aws-knowledge entries so the agent does not see duplicate tools. See docs.aws.amazon.com/agent-toolkit/latest/userguide/getting-started-aws-mcp-server.html"
+    ],
+    "retired": [
+      "The AWS Diagram MCP server from the chapter's Phase 6 list is not included: every PyPI release is yanked, superseded by the diagram skill in AWS's deploy-on-aws agent plugin"
+    ],
+    "security": [
+      "Use IAM roles with least privilege",
+      "Never hardcode credentials in this file",
+      "Use AWS Secrets Manager for sensitive values"
+    ]
+  }
+}

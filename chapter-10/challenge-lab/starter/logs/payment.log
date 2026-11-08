@@ -1,0 +1,53 @@
+# Payment service, production, same window as gateway.log.
+# The processor pool is 3 connections wide. Latency climbs with queue depth.
+#
+# Lines tagged "reconciliation" come from the nightly settlement job, not from
+# the service code in services/payment/. Same for the rollup at the bottom,
+# which is exported from the processor's dashboard.
+
+2026-07-18T14:31:02.394Z INFO [payment] charge ok request_id=req_7f2a00 order=ord_88412 charge=ch_5b1c9e42a077 elapsed_ms=182
+2026-07-18T14:31:48.190Z INFO [payment] charge ok request_id=req_7f2a01 order=ord_88479 charge=ch_7d40aa93bb18 elapsed_ms=201
+
+# ---- Incident window. Six charges, three connections. Latency stacks up. ----
+
+2026-07-18T14:32:00.604Z INFO [payment] charge ok request_id=req_7f2a11 order=ord_88510 charge=ch_2e91c05d7f43 elapsed_ms=268
+2026-07-18T14:32:00.650Z INFO [payment] charge ok request_id=req_7f2a13 order=ord_88512 charge=ch_0ab6f217c8de elapsed_ms=310
+2026-07-18T14:32:00.696Z INFO [payment] charge ok request_id=req_7f2a12 order=ord_88511 charge=ch_9c3d8e50a1b2 elapsed_ms=357
+2026-07-18T14:32:00.738Z INFO [payment] charge ok request_id=req_7f2a14 order=ord_88513 charge=ch_4f77b1e60d3a elapsed_ms=396
+2026-07-18T14:32:00.795Z INFO [payment] charge ok request_id=req_7f2a15 order=ord_88514 charge=ch_63b0d9145aa1 elapsed_ms=451
+2026-07-18T14:32:00.862Z INFO [payment] charge ok request_id=req_7f2a16 order=ord_88515 charge=ch_ae05c8b3f229 elapsed_ms=529
+
+# Every charge in the incident window succeeded. None of them timed out.
+# The three orders that failed for the customer (ord_88513, ord_88514,
+# ord_88515) were charged here first, then refunded seconds later.
+
+2026-07-18T14:32:00.751Z INFO [payment] refund ok request_id=req_7f2a14 charge=ch_4f77b1e60d3a
+2026-07-18T14:32:00.810Z INFO [payment] refund ok request_id=req_7f2a15 charge=ch_63b0d9145aa1
+2026-07-18T14:32:00.879Z INFO [payment] refund ok request_id=req_7f2a16 charge=ch_ae05c8b3f229
+
+# ---- Later, a genuine slow burst. The processor queue backs up. ----
+
+2026-07-18T14:32:41.996Z WARNING [payment] charge slow request_id=req_7f2a30 order=ord_88601 charge=ch_a09b7f3d2c14 elapsed_ms=1049 processor_queue_depth=7
+2026-07-18T14:32:42.290Z WARNING [payment] charge slow request_id=req_7f2a31 order=ord_88602 charge=ch_51e7a2d94c60 elapsed_ms=1281 processor_queue_depth=6
+2026-07-18T14:32:42.402Z INFO [payment] charge replay request_id=req_7f2a31 order=ord_88602 charge=ch_51e7a2d94c60 idempotency_key=ord_88602:rsv_77bd0e3311 attempt=2
+2026-07-18T14:32:43.118Z WARNING [payment] charge slow request_id=req_7f2a32 order=ord_88610 charge=ch_ee1c07a4b5d9 elapsed_ms=1602 processor_queue_depth=8
+
+# The retry on req_7f2a31 hit the idempotency key and returned the original
+# charge. The card was billed once. Duplicate charges did not happen.
+
+2026-07-18T14:32:57.148Z WARNING [payment] charge slow request_id=req_7f2a34 order=ord_88618 charge=ch_bd3092e17f45 elapsed_ms=2004 processor_queue_depth=9
+# That one exceeded the gateway's 1.0s deadline twice. The gateway gave up,
+# released the hold, and returned a 504. The charge landed anyway, after the
+# gateway had stopped listening, so nobody refunded it. Worth a ticket of its
+# own. It is also a different failure mode from the 500s: slow payment produces
+# 504s with no order, not 500s on orders that inventory already accepted.
+2026-07-18T14:33:30.000Z WARNING [payment] reconciliation orphan charge=ch_bd3092e17f45 order=ord_88618 age_s=33 no_matching_order=true
+
+2026-07-18T14:47:12.902Z INFO [payment] charge ok request_id=req_81cd02 order=ord_89330 charge=ch_c418d70ba295 elapsed_ms=331
+2026-07-18T14:47:12.956Z INFO [payment] charge ok request_id=req_81cd03 order=ord_89331 charge=ch_88a5f2013dbe elapsed_ms=383
+2026-07-18T14:47:13.012Z INFO [payment] charge ok request_id=req_81cd04 order=ord_89332 charge=ch_10de44b6c703 elapsed_ms=447
+2026-07-18T14:47:13.028Z INFO [payment] refund ok request_id=req_81cd04 charge=ch_10de44b6c703
+
+# ---- Daily rollup from the processor dashboard, for reference. ----
+# 2026-07-18 totals: charges=14208 declines=132 timeouts=41 duplicate_charges=0
+# p50=214ms p95=890ms p99=1980ms pool_size=3

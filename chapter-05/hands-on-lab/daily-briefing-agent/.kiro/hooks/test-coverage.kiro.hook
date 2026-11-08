@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Auto Test Coverage",
+  "description": "Automatically analyzes modified Python files and ensures test coverage for new or changed functions",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A Python source file has been modified. Please analyze the changes and ensure adequate test coverage:\n\n1. **Identify Changes**\n   - List new functions or classes added\n   - List modified functions with changed signatures or logic\n   - Note any removed functions that may have orphaned tests\n\n2. **Check Existing Tests**\n   - Look for corresponding test file in tests/ directory\n   - Verify tests exist for new/modified functions\n   - Check if existing tests still apply after changes\n\n3. **Generate Missing Tests**\n   - Create unit tests for any untested functions\n   - Use pytest fixtures from conftest.py\n   - Include edge cases and error scenarios\n   - Mock external dependencies (AWS services, HTTP requests)\n\n4. **Update Test Markers**\n   - Add @pytest.mark.unit for fast isolated tests\n   - Add @pytest.mark.integration for LocalStack tests\n   - Add @pytest.mark.property for Hypothesis tests if applicable\n\n5. **Verify Coverage**\n   - Ensure minimum 70% coverage is maintained\n   - Flag any uncovered critical paths\n\nFollow the testing patterns defined in .kiro/steering/tech.md"
+  }
+}

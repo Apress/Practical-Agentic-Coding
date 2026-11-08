@@ -1,0 +1,90 @@
+{
+  "//": "MoneyMind workspace configuration, written out as a readable summary of",
+  "//1": "the choices Chapter 6 asks you to make: which model tier handles which",
+  "//2": "task, what the agent may do without asking, what the context engine",
+  "//3": "indexes, and how Secure Mode is set. Antigravity's own settings UI is the",
+  "//4": "authoritative place to change these; treat this file as the record of the",
+  "//5": "decisions, and check antigravity.google/docs for the current key names.",
+  "workspace": {
+    "name": "MoneyMind",
+    "description": "Agentic financial dashboard built with intent-first development"
+  },
+  "editor": {
+    "//": "Antigravity uses the Open VSX Registry by default; no override needed.",
+    "//2": "Extensions missing from the registry can be installed from a VSIX file."
+  },
+  "agent": {
+    "//": "Model names change between releases. Pick from the list Antigravity",
+    "//2": "shows in its model selector (or `agy models` for the CLI) rather than",
+    "//3": "copying these values. The tiers are what matter: a Flash-class model",
+    "//4": "for fast localized edits, a Pro-class model for planning and deep",
+    "//5": "reasoning. Genkit prompt files pin their own models separately, in",
+    "//6": "prompts/*.prompt.",
+    "defaultModel": "gemini-flash-latest",
+    "planningModel": "gemini-pro-latest",
+    "modelSelection": {
+      "deepReasoning": "gemini-pro-latest",
+      "fastExecution": "gemini-flash-latest"
+    },
+    "autoApprove": {
+      "fileCreation": false,
+      "fileModification": false,
+      "terminalCommands": false,
+      "browserNavigation": false
+    }
+  },
+  "context": {
+    "nativeContext": {
+      "enabled": true,
+      "indexing": {
+        "fileTypes": ["ts", "tsx", "js", "jsx", "json", "md"],
+        "excludePatterns": ["node_modules/**", "dist/**", ".next/**"]
+      },
+      "astParsing": true,
+      "gitIntegration": true,
+      "terminalStreaming": true
+    },
+    "mcpSupport": {
+      "enabled": true,
+      "servers": []
+    }
+  },
+  "secureMode": {
+    "enabled": false,
+    "browserUrlGovernance": {
+      "allowlist": ["localhost:*", "*.google.com"],
+      "denylist": []
+    },
+    "forcedReview": {
+      "terminalCommands": true,
+      "browserJavaScript": true,
+      "implementationPlans": true
+    },
+    "workspaceIsolation": {
+      "respectGitignore": true,
+      "preventExternalAccess": true
+    }
+  },
+  "artifacts": {
+    "autoGenerate": {
+      "implementationPlans": true,
+      "walkthroughs": true,
+      "testReports": true
+    },
+    "storage": {
+      "location": ".antigravity/artifacts",
+      "retention": "30d"
+    }
+  },
+  "knowledgeItems": {
+    "autoExtraction": true,
+    "storage": ".antigravity/knowledge"
+  },
+  "conversationModes": {
+    "default": "fast",
+    "descriptions": {
+      "planning": "Deep research, multi-file refactors, collaborative work",
+      "fast": "Speed-optimized for localized tasks"
+    }
+  }
+}

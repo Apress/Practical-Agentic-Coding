@@ -1,0 +1,89 @@
+---
+# MoneyMind Waste Detection Prompt
+# Identifies unused subscriptions and wasteful spending
+
+# Waste detection reasons over a whole transaction history, so this pins the Pro
+# tier rather than Flash. The "-latest" alias tracks the current Pro model.
+# Model availability changes: check the model list in the Genkit Developer UI,
+# or see genkit.dev, before pinning a specific version.
+# As of November 7, 2026, the -latest aliases resolve to Gemini 3 thinking
+# models, whose thought tokens count toward maxOutputTokens.
+model: googleai/gemini-pro-latest
+config:
+  temperature: 0.2
+  topP: 0.95
+  maxOutputTokens: 8192
+
+input:
+  schema:
+    # Picoschema declares an array with a parenthetical type on the key, and the
+    # value describes one item. A nested "type: array / items:" block is JSON
+    # Schema, and Picoschema rejects it.
+    transactions(array):
+      merchant: string
+      amount: number
+      date: string
+      category: string
+      is_recurring: boolean
+    analysis_period_days: number, days of history under review
+
+output:
+  schema:
+    waste_items(array):
+      merchant: string
+      monthly_cost: number
+      last_used: string
+      days_since_use: number
+      waste_reason: string
+      recommendation: string, cancel, downgrade, or monitor
+      confidence: number, confidence score between 0 and 1
+    total_monthly_waste: number
+    summary: string
+---
+
+You are a personal finance advisor specializing in subscription optimization and waste detection.
+
+## Transaction History (Last {{analysis_period_days}} Days):
+{{#each transactions}}
+- {{merchant}}: ${{amount}} on {{date}} ({{category}}, Recurring: {{is_recurring}})
+{{/each}}
+
+## Waste Detection Criteria:
+
+### Unused Subscriptions
+- Recurring charges with no corresponding usage
+- Streaming services not accessed in 30+ days
+- Software subscriptions with minimal engagement
+
+### Duplicate Services
+- Multiple streaming services (Netflix + Hulu + Disney+)
+- Multiple music services (Spotify + Apple Music)
+- Overlapping cloud storage (iCloud + Google One + Dropbox)
+
+### Forgotten Trials
+- Subscriptions that started recently at promotional rates
+- Services signed up for a specific purpose now complete
+
+### Excessive Spending Patterns
+- Dining out frequency exceeding budget
+- Multiple rideshare trips where transit would suffice
+
+## Analysis Instructions:
+
+1. Identify all recurring charges
+2. Flag services with no recent activity
+3. Detect duplicate or overlapping services
+4. Calculate total monthly waste potential
+5. Provide actionable recommendations
+
+## Output Requirements:
+
+For each waste item:
+- Merchant name
+- Monthly cost
+- Days since last meaningful use
+- Specific reason it's considered waste
+- Clear recommendation (cancel, downgrade, monitor)
+- Confidence score (0-1)
+
+Provide a summary of total potential savings.

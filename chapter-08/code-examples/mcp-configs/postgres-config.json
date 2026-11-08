@@ -1,0 +1,91 @@
+{
+  "description": "PostgreSQL MCP Server Configuration via MCP Toolbox for Databases (the archived @modelcontextprotocol/server-postgres is deprecated)",
+  "documentation": "https://github.com/googleapis/mcp-toolbox",
+
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@toolbox-sdk/server", "--prebuilt=postgres", "--stdio"],
+      "env": {
+        "POSTGRES_HOST": "${POSTGRES_HOST}",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DATABASE": "${POSTGRES_DATABASE}",
+        "POSTGRES_USER": "${POSTGRES_USER}",
+        "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD}"
+      }
+    }
+  },
+
+  "available_tools": {
+    "_comment": "Tool names come from the Toolbox prebuilt Postgres tool set and vary by version; run /mcp in a session to list what the connected server actually exposes.",
+    "execute_sql": {
+      "description": "Execute a SQL statement against the database",
+      "example_prompts": [
+        "Query the users table for accounts created in the last week",
+        "Find all orders with status 'pending'",
+        "Get the count of tickets grouped by category",
+        "Describe the schema of the tickets table"
+      ]
+    },
+    "list_tables": {
+      "description": "List all tables in the database",
+      "example_prompts": [
+        "List all tables in the database",
+        "What tables are available?"
+      ]
+    }
+  },
+
+  "environment_setup": {
+    "variables": {
+      "POSTGRES_HOST": "Database host (e.g., localhost)",
+      "POSTGRES_PORT": "Port, default 5432",
+      "POSTGRES_DATABASE": "Database name (e.g., supportflow)",
+      "POSTGRES_USER": "Role to connect as; use a read-only role",
+      "POSTGRES_PASSWORD": "Set in your shell, never in the file"
+    },
+    "examples": {
+      "local": "export POSTGRES_HOST=localhost POSTGRES_DATABASE=supportflow POSTGRES_USER=claude_reader",
+      "docker": "export POSTGRES_HOST=db POSTGRES_DATABASE=supportflow POSTGRES_USER=claude_reader",
+      "remote": "export POSTGRES_HOST=db.example.com POSTGRES_DATABASE=production POSTGRES_USER=claude_reader"
+    }
+  },
+
+  "security_recommendations": {
+    "use_read_only_user": {
+      "description": "Create a dedicated read-only user for Claude Code",
+      "sql": [
+        "CREATE USER claude_reader WITH PASSWORD 'secure_password';",
+        "GRANT CONNECT ON DATABASE mydb TO claude_reader;",
+        "GRANT USAGE ON SCHEMA public TO claude_reader;",
+        "GRANT SELECT ON ALL TABLES IN SCHEMA public TO claude_reader;",
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO claude_reader;"
+      ]
+    },
+    "restrict_tables": {
+      "description": "Limit access to specific tables",
+      "sql": [
+        "REVOKE SELECT ON sensitive_table FROM claude_reader;"
+      ]
+    },
+    "use_connection_pooling": {
+      "description": "Use PgBouncer or similar for production",
+      "environment": "POSTGRES_HOST=pgbouncer POSTGRES_PORT=6432"
+    }
+  },
+
+  "example_queries": {
+    "basic_select": "SELECT * FROM tickets WHERE status = 'open' LIMIT 10;",
+    "aggregation": "SELECT category, COUNT(*) FROM tickets GROUP BY category;",
+    "join": "SELECT t.id, t.content, u.email FROM tickets t JOIN users u ON t.user_id = u.id;",
+    "date_filter": "SELECT * FROM tickets WHERE created_at > NOW() - INTERVAL '7 days';"
+  },
+
+  "permissions_example": {
+    "_comment": "MCP tool permissions use the form mcp__<server>__<tool>. Permission rules match whole tools, not SQL verbs inside an argument, and Toolbox exposes SQL through a single execute_sql tool, so read-only enforcement belongs in the database grant (see security_recommendations above) or in a PreToolUse hook that inspects the query text.",
+    "allow": [
+      "mcp__postgres__execute_sql",
+      "mcp__postgres__list_tables"
+    ]
+  }
+}

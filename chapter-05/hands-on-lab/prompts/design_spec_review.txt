@@ -1,0 +1,4 @@
+Create the architectural diagram using Mermaid in the design document.
+Explain how the user and data security are handled. For performance, do we need
+to add the cache? Are you using a key-value or JSON-based database? What unit
+testing framework and functional testing framework are used?

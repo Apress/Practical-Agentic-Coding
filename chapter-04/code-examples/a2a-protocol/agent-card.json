@@ -1,0 +1,14 @@
+{
+  "name": "Security Review Agent",
+  "description": "Reviews code changes for defects and security vulnerabilities, including OWASP Top 10 issues.",
+  "version": "1.0.0",
+  "supportedInterfaces": [
+    { "url": "https://security-review-agent.example.com/a2a/v1", "protocolBinding": "JSONRPC", "protocolVersion": "1.0" }
+  ],
+  "capabilities": { "streaming": true },
+  "defaultInputModes": ["text/plain", "application/json"],
+  "defaultOutputModes": ["text/plain", "application/json"],
+  "skills": [
+    { "id": "security-review", "name": "Security Review", "description": "Analyzes a code change and returns prioritized security findings with suggested fixes.", "tags": ["code-review", "security", "quality"] }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "dashboard": {
+    "title": "Deployment Metrics",
+    "description": "Track deployment success, duration, and frequency",
+    "tags": ["deployment", "ci-cd", "zero-downtime"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Deployment Success Rate (Last 24h)",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(deployment_success_total[24h]) / rate(deployment_total[24h])",
+            "legendFormat": "Success Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.9, "color": "yellow"},
+                {"value": 0.95, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Average Deployment Duration",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+        "targets": [
+          {
+            "expr": "avg(deployment_duration_seconds)",
+            "legendFormat": "Avg Duration"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 300, "color": "yellow"},
+                {"value": 600, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Deployments Over Time",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(deployment_total[5m])) by (service)",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Deployments/min"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Failed Deployments by Service",
+        "type": "bargauge",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(deployment_failed_total) by (service)",
+            "legendFormat": "{{service}}"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Deployment Duration by Service",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "deployment_duration_seconds",
+            "legendFormat": "{{service}} v{{version}}"
+          }
+        ]
+      }
+    ]
+  },
+  "message": "Placeholder dashboard for the hands-on lab. In production, connect to actual Prometheus data source.",
+  "instructions": [
+    "To use this dashboard:",
+    "1. Import in Grafana: Dashboard menu → Import → Upload JSON file",
+    "2. Select Prometheus data source when prompted",
+    "3. Ensure your deployer exports these metrics:",
+    "   - deployment_total",
+    "   - deployment_success_total",
+    "   - deployment_failed_total",
+    "   - deployment_duration_seconds",
+    "4. Queries assume standard Prometheus metric names",
+    "5. Customize queries based on your actual metric names"
+  ],
+  "metrics_to_export": {
+    "deployment_total": "Counter of total deployments (labels: service, version, environment)",
+    "deployment_success_total": "Counter of successful deployments",
+    "deployment_failed_total": "Counter of failed deployments",
+    "deployment_duration_seconds": "Histogram of deployment durations",
+    "deployment_in_progress": "Gauge of currently running deployments"
+  }
+}

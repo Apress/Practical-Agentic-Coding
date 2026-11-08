@@ -1,0 +1,1114 @@
+# =============================================================================
+# Agentic Quality Gates: security gate + cost gate wired into CI/CD
+# Chapter 11, Section 11.5 ("Wiring gates into CI/CD")
+# =============================================================================
+#
+# The book shows the shape of this workflow in about 25 lines. This is the
+# production version it points at: Docker setup for the scanners, headless
+# agent authentication done properly, error handling on every gate, path-based
+# conditional execution, and gate decisions uploaded as artifacts so the audit
+# trail outlives the job log.
+#
+# Install it as .github/workflows/agentic-quality-gates.yml in your own
+# repository.
+#
+# -----------------------------------------------------------------------------
+# WHAT RUNS WHEN
+# -----------------------------------------------------------------------------
+#   change-scope   Works out whether app code, infrastructure, or both changed.
+#                  Every gate below is conditional on its output, so a docs-only
+#                  PR does not pay for a security scan.
+#   fast-gates     Secret detection and dependency audit. Seconds, every push.
+#   security-gate  Deep scan (Trivy in Docker + agent risk assessment).
+#                  Pull requests and pushes to main only.
+#   cost-gate      infracost estimate plus the CostGuardrails policy check.
+#                  Only when terraform/ changed.
+#   gate-summary   Aggregates decisions, comments on the PR, uploads artifacts.
+#   deploy         Only on main, only after every required gate approves.
+#
+# -----------------------------------------------------------------------------
+# AUTHENTICATION (read this before you copy the file)
+# -----------------------------------------------------------------------------
+# CI must authenticate with an API key or with a cloud provider identity, never
+# with a developer's personal subscription login. A subscription login is a
+# credential tied to a person: your platform team cannot rotate it, and it
+# leaves no service-account audit trail. (Claude Code can mint a long-lived
+# subscription token for scripts with `claude setup-token`; this workflow does
+# not use one, and the --bare flag below never reads it.) For which credentials
+# Anthropic intends for which use, see code.claude.com/docs/en/legal-and-compliance.
+# Usage is billed to the credential a run uses (per token for an API key or a
+# cloud identity), so budget pipeline usage as its own line item rather than
+# assuming it rides on existing seats.
+#
+# Three options. They are not interchangeable: each needs different secrets,
+# and the two federated ones need extra configuration the API key does not.
+#
+#   1. AUTH_MODE=api-key. ANTHROPIC_API_KEY in repository or environment
+#      secrets. Simplest, and the only one that needs no cloud setup. A static
+#      credential that sits in your secret store, so rotate it deliberately.
+#
+#   2. AUTH_MODE=bedrock. AWS workload identity federation into Amazon Bedrock.
+#      The job exchanges its GitHub OIDC token for short-lived AWS credentials
+#      at run time, so no static key exists to leak. Requests stay inside your
+#      AWS account, which gives provider-side data residency. Needs a role that
+#      trusts GitHub's OIDC provider and has Bedrock invoke permissions, plus
+#      the Claude models enabled in that account and region.
+#
+#   3. AUTH_MODE=vertex. Google Cloud workload identity federation into Vertex
+#      AI (now named Google Cloud's Agent Platform; the Claude Code variables
+#      keep their VERTEX names). Same trade, on GCP. Needs one thing more than
+#      the AWS path: Claude Code has to be told which project to bill and call,
+#      via ANTHROPIC_VERTEX_PROJECT_ID. Federating the identity is not enough on
+#      its own; without the project the run fails with "No projectId was
+#      given and it could not be resolved from credentials."
+#
+# Options 2 and 3 need `permissions: id-token: write` on the job, which is
+# already set. Options 2 and 3 also require the model to be available in the
+# region you point at, which is a per-account enablement step, not something a
+# workflow file can do for you.
+#
+# Provider opt-in is an environment-variable switch (CLAUDE_CODE_USE_BEDROCK /
+# CLAUDE_CODE_USE_VERTEX), set per mode in the gate step below. Confirm the
+# current names against code.claude.com/docs and
+# github.com/anthropics/claude-code-action before you rely on them in a
+# production pipeline, because automation surfaces move faster than book
+# chapters.
+#
+# -----------------------------------------------------------------------------
+# BEFORE HAND-ROLLING: check the official action first
+# -----------------------------------------------------------------------------
+# Anthropic publishes anthropics/claude-code-action, which responds to @claude
+# mentions on pull requests and issues, and `/install-github-app` walks you
+# through the setup. Use it for review and Q&A. The hand-rolled steps below
+# exist for gate logic the action does not model: scoped tool allowlists per
+# step, structured pass/fail output, custom policy wiring, and an artifact
+# trail.
+#
+# -----------------------------------------------------------------------------
+# REQUIRED SECRETS AND VARIABLES
+# -----------------------------------------------------------------------------
+# Secrets (Settings > Secrets and variables > Actions):
+#   ANTHROPIC_API_KEY        AUTH_MODE=api-key only.
+#   INFRACOST_API_KEY        Free to register at infracost.io.
+#   AWS_GATE_ROLE_ARN        AUTH_MODE=bedrock only. Role trusting GitHub OIDC.
+#                            Also used by the cost gate for `terraform plan`.
+#   GCP_WIF_PROVIDER         AUTH_MODE=vertex only. Workload identity provider.
+#   GCP_SERVICE_ACCOUNT      AUTH_MODE=vertex only.
+#   GCP_PROJECT_ID           AUTH_MODE=vertex only. The project Vertex bills and
+#                            serves the model from. Not a secret in any real
+#                            sense, but keeping it beside the other two means
+#                            one place to look. A repository variable
+#                            (vars.GCP_PROJECT_ID) works equally well.
+#
+# Files this workflow expects in your repository:
+#   .github/budget-limits.json   Budget ceilings. See fixtures/budget-limits.json.
+#   scripts/cost_gate.py         A copy of cost-guardrails.py from this chapter.
+# =============================================================================
+
+name: Agentic Quality Gates
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_deep_gates:
+        description: "Run the deep gates even if no relevant paths changed"
+        type: boolean
+        default: false
+
+# Least privilege by default. Individual jobs widen this where they need to.
+permissions:
+  contents: read
+
+# A new push supersedes the in-flight run for the same ref. Gates are
+# expensive; do not pay twice for a branch someone is still pushing to.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# -----------------------------------------------------------------------------
+# VERSION PINNING: two different postures, on purpose
+# -----------------------------------------------------------------------------
+# Scanner images are pinned to an exact patch tag, and the GitHub Actions below
+# float on a major tag (actions/checkout@v7). That is a deliberate split, not an
+# oversight, and it is worth understanding before you copy either one.
+#
+# Every action major used here runs on Node 24. As of November 7, 2026, GitHub's
+# hosted runners do not run Node 20 actions, so the Node 20 majors (including
+# the actions/checkout@v4 in the book's sketch) are worth moving off. When a
+# newer major ships, read its release notes before you bump, because a major is
+# where inputs change.
+#
+# A scanner decides whether your change ships. A new rule in a scanner release
+# can turn yesterday's passing build into today's blocked one with no commit of
+# yours in between, so those get an exact tag and a human decides when to move
+# it. The actions are plumbing: checkout, upload-artifact, setup-python. A patch
+# release changing your gate's verdict is not a realistic failure mode there,
+# and floating on the major tag means security fixes arrive without a PR.
+#
+# The stricter option for both is a SHA (`actions/checkout@<40-char-sha>`), which
+# a moved tag cannot change. Its cost is real: every
+# update becomes a commit, and unattended tools like Dependabot become close to
+# mandatory to avoid drifting onto unpatched versions. The floating major tag is
+# the common choice and what most public workflows use. Pick per repository: a
+# repo under supply-chain audit should lock or SHA-pin everything, and most
+# others are well served by what is here.
+#
+# As of November 7, 2026, GitHub Actions workflow lockfiles are generally
+# available, and GitHub's documentation prefers them to SHA pins in workflow
+# files. The `gh actions-lock` CLI extension records the commit behind every
+# action, transitive ones included, in .github/workflows/actions.lock and
+# rewrites each tag to the exact release it locked (@v7 becomes, for example,
+# @v7.0.1); Dependabot then updates both in one pull request. It does not lock
+# container images, so the scanner images below keep their exact tags. See
+# docs.github.com/actions/concepts/security/workflow-dependency-lockfiles.
+#
+# No SHAs are written into this file, because a SHA copied from a book is stale
+# on arrival. If you want them, resolve each one yourself:
+#   git ls-remote https://github.com/actions/checkout refs/tags/v7
+# -----------------------------------------------------------------------------
+env:
+  # api-key | bedrock | vertex. See the AUTHENTICATION notes above.
+  AUTH_MODE: api-key
+  # Where every gate writes its decision. Uploaded as an artifact at the end.
+  DECISIONS_DIR: gate-decisions
+  # Exact tags: a scanner release must not change a gate verdict overnight, so
+  # moving one is a reviewed change. As of November 7, 2026, Trivy 0.76.1 is
+  # the current release (a security rebuild for CVE-2026-111943), and GitHub
+  # lists no advisory against it (releases before
+  # 0.71.1 are affected by GHSA-mcj4-mphf-j9ff, a path traversal through
+  # downloaded artifacts). Before you move it, read Trivy's security advisories
+  # on GitHub: advisory
+  # GHSA-69fq-xp46-6x23 describes the March 2026 incident in which attackers
+  # published malicious 0.69.4 to 0.69.6 builds. ci-0.10.47 is the current
+  # infracost 0.10 CI image, a security release for the same CVE (the floating
+  # ci-0.10 tag moves with every patch release, which is what an exact tag
+  # avoids).
+  TRIVY_IMAGE: aquasec/trivy:0.76.1
+  INFRACOST_IMAGE: infracost/infracost:ci-0.10.47
+
+jobs:
+  # ===========================================================================
+  # 1. Which gates does this change actually need?
+  # ===========================================================================
+  change-scope:
+    name: Determine change scope
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.scope.outputs.code }}
+      infra: ${{ steps.scope.outputs.infra }}
+      deps: ${{ steps.scope.outputs.deps }}
+      any: ${{ steps.scope.outputs.any }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history so the merge-base diff below has something to compare.
+          fetch-depth: 0
+
+      - name: Classify changed paths
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # fetch-depth: 0 on checkout already gave us full history, so the
+            # merge base resolves without another fetch.
+            base="origin/${{ github.base_ref }}"
+            changed=$(git diff --name-only "$(git merge-base HEAD "$base")" HEAD)
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            changed=$(git diff --name-only "${{ github.event.before }}" HEAD)
+          else
+            # First push on a branch, or a manual dispatch. Nothing reliable to
+            # diff against, so treat every gate as in scope.
+            changed=$(git ls-files)
+          fi
+
+          echo "Changed files:"
+          printf '%s\n' "$changed" | sed 's/^/  /'
+
+          force="${{ github.event.inputs.run_deep_gates || 'false' }}"
+
+          code=false
+          infra=false
+          deps=false
+          if [ "$force" = "true" ]; then
+            code=true; infra=true; deps=true
+          else
+            if echo "$changed" | grep -Eq '\.(py|js|ts|tsx|jsx|go|java|cs|rb)$|(^|/)Dockerfile'; then
+              code=true
+            fi
+            if echo "$changed" | grep -Eq '^(terraform|infra|iac)/|\.(tf|tfvars)$'; then
+              infra=true
+            fi
+            if echo "$changed" | grep -Eq '(^|/)(package(-lock)?\.json|requirements.*\.txt|pyproject\.toml|go\.(mod|sum)|Gemfile(\.lock)?)$'; then
+              deps=true
+            fi
+          fi
+
+          any=false
+          if [ "$code" = "true" ] || [ "$infra" = "true" ] || [ "$deps" = "true" ]; then
+            any=true
+          fi
+
+          {
+            echo "code=$code"
+            echo "infra=$infra"
+            echo "deps=$deps"
+            echo "any=$any"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Change scope"
+            echo ""
+            echo "| Gate | In scope |"
+            echo "|------|----------|"
+            echo "| Security (application code) | \`$code\` |"
+            echo "| Cost (infrastructure) | \`$infra\` |"
+            echo "| Dependency audit | \`$deps\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ===========================================================================
+  # 2. Fast gates: seconds, no agent, run on anything that changed
+  # ===========================================================================
+  fast-gates:
+    name: Fast gates (secrets, dependencies)
+    needs: change-scope
+    if: needs.change-scope.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Prepare decisions directory
+        run: mkdir -p "$DECISIONS_DIR"
+
+      # Trivy in Docker rather than a local install: the image is pinned, the
+      # scanner cannot pick up host state, and the same command runs on a
+      # laptop, a self-hosted runner, and a GitHub-hosted runner.
+      - name: Secret detection (Trivy, Docker)
+        id: secrets
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          # --exit-code 1 makes trivy fail the step on a finding. The step's
+          # own exit status has to be that code, so the next step can branch on
+          # steps.secrets.outcome. Do not append anything after this command
+          # that would overwrite the status.
+          docker run --rm \
+            -v "$PWD:/src:ro" \
+            -v "$PWD/$DECISIONS_DIR:/out" \
+            "$TRIVY_IMAGE" fs \
+              --scanners secret \
+              --exit-code 1 \
+              --format json \
+              --output /out/secrets-scan.json \
+              /src
+
+      - name: Fail on detected secrets
+        if: steps.secrets.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::error::Secret detection failed the fast gate."
+          # A finding is a hard stop, but so is a scanner that could not run.
+          # Distinguish the two so nobody debugs the wrong problem.
+          if [ -s "$DECISIONS_DIR/secrets-scan.json" ]; then
+            echo "Findings (paths and rule IDs only, values are not printed):"
+            python3 - "$DECISIONS_DIR/secrets-scan.json" <<'PY'
+          import json, sys
+          # Best-effort reporting only: the step exits 1 regardless, so a
+          # malformed report must not replace the gate's error message with a
+          # traceback. Nothing here is allowed to raise.
+          try:
+              with open(sys.argv[1], encoding="utf-8") as handle:
+                  data = json.load(handle)
+          except (OSError, ValueError) as exc:
+              print(f"  (could not parse the scanner report: {exc})")
+              sys.exit(0)
+          results = data.get("Results") if isinstance(data, dict) else None
+          if not isinstance(results, list):
+              print("  (unexpected report shape; see the uploaded artifact)")
+              sys.exit(0)
+          for result in results:
+              if not isinstance(result, dict):
+                  continue
+              for secret in result.get("Secrets") or []:
+                  if not isinstance(secret, dict):
+                      continue
+                  print(f"  {result.get('Target')}:{secret.get('StartLine')} "
+                        f"[{secret.get('RuleID')}] {secret.get('Title')}")
+          PY
+            echo "Rotate anything real, then remove it from history."
+          else
+            echo "The scanner produced no report. Treat this as a gate failure,"
+            echo "not a pass: a scan that did not run has proven nothing."
+          fi
+          exit 1
+
+      - name: Dependency audit
+        if: needs.change-scope.outputs.deps == 'true'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [ -f package.json ]; then
+            npm audit --json > "$DECISIONS_DIR/npm-audit.json" || true
+          fi
+          if [ -f requirements.txt ]; then
+            pip install --quiet pip-audit
+            pip-audit -r requirements.txt -f json -o "$DECISIONS_DIR/pip-audit.json" || true
+          fi
+          echo "Dependency audit reports written. The security gate interprets them."
+
+      - name: Upload fast gate reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fast-gate-reports
+          path: ${{ env.DECISIONS_DIR }}/
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # ===========================================================================
+  # 3. Security gate: scanner findings plus contextual agent assessment
+  # ===========================================================================
+  security-gate:
+    name: Security gate
+    needs: [change-scope, fast-gates]
+    if: needs.change-scope.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # Required for AUTH_MODE=bedrock or vertex. Harmless for api-key.
+      id-token: write
+    outputs:
+      decision: ${{ steps.gate.outputs.decision }}
+      risk_level: ${{ steps.gate.outputs.risk_level }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Prepare decisions directory
+        run: mkdir -p "$DECISIONS_DIR"
+
+      # The fast gates ran on another runner. Pull their reports (secret scan,
+      # npm and pip audits) into the decisions directory, which is where the
+      # agent prompt below tells the agent to look. continue-on-error because a
+      # run whose fast gates uploaded nothing has no artifact to download.
+      - name: Download fast gate reports
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: fast-gate-reports
+          path: ${{ env.DECISIONS_DIR }}
+
+      # ---------------------------------------------------------------------
+      # Docker setup for the container scan. Building the image here means the
+      # gate scans the artifact you are about to ship, not a stale registry tag.
+      # ---------------------------------------------------------------------
+      - name: Set up Docker Buildx
+        if: hashFiles('Dockerfile') != ''
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build application image for scanning
+        if: hashFiles('Dockerfile') != ''
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          load: true
+          tags: gate-candidate:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan image (Trivy, Docker)
+        if: hashFiles('Dockerfile') != ''
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/$DECISIONS_DIR:/out" \
+            "$TRIVY_IMAGE" image \
+              --severity HIGH,CRITICAL \
+              --format json \
+              --output /out/image-scan.json \
+              "gate-candidate:${{ github.sha }}"
+          echo "Image scan complete. A non-zero exit here is data for the"
+          echo "agent to weigh, not an automatic block."
+
+      # ---------------------------------------------------------------------
+      # Headless agent authentication. Exactly one of these three runs.
+      # ---------------------------------------------------------------------
+      - name: Authenticate to AWS for Bedrock (workload identity)
+        if: env.AUTH_MODE == 'bedrock'
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_GATE_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: agentic-security-gate-${{ github.run_id }}
+
+      - name: Authenticate to Google Cloud for Vertex (workload identity)
+        if: env.AUTH_MODE == 'vertex'
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Verify credentials are present
+        shell: bash
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          case "$AUTH_MODE" in
+            api-key)
+              if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+                echo "::error::AUTH_MODE=api-key but the ANTHROPIC_API_KEY secret is empty."
+                echo "Add the secret, or switch AUTH_MODE to bedrock or vertex."
+                exit 1
+              fi
+              echo "Using an API key from repository secrets."
+              ;;
+            bedrock)
+              echo "Using short-lived AWS credentials from workload identity federation."
+              ;;
+            vertex)
+              if [ -z "${GCP_PROJECT_ID:-}" ]; then
+                echo "::error::AUTH_MODE=vertex but GCP_PROJECT_ID is empty."
+                echo "Vertex needs the project explicitly (ANTHROPIC_VERTEX_PROJECT_ID)."
+                echo "Federated credentials alone do not resolve a project."
+                exit 1
+              fi
+              echo "Using short-lived Google Cloud credentials from workload identity federation."
+              ;;
+            *)
+              echo "::error::AUTH_MODE must be api-key, bedrock, or vertex (got '$AUTH_MODE')."
+              exit 1
+              ;;
+          esac
+          # Guardrail, not decoration. An interactive subscription login would
+          # leave credentials in the runner home directory; a service credential
+          # never does. Failing loudly here is cheaper than discovering in an
+          # audit that a pipeline ran on someone's personal seat.
+          if [ -e "$HOME/.claude/.credentials.json" ]; then
+            echo "::error::Found interactive login credentials on the runner."
+            echo "CI must authenticate with an API key or a cloud provider identity."
+            exit 1
+          fi
+
+      - name: Install Claude Code
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install -g @anthropic-ai/claude-code
+          claude --version
+
+      # ---------------------------------------------------------------------
+      # The gate itself. Read-only tools, structured output, bounded runtime.
+      # ---------------------------------------------------------------------
+      - name: Run security compliance check
+        id: scan
+        continue-on-error: true
+        shell: bash
+        env:
+          # api-key mode. Empty in the other two modes, where the provider
+          # switch below takes over and Claude Code uses cloud credentials.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Provider opt-in switches. Exactly one is ever set to 1; in the
+          # other modes each renders as an empty string, which is treated as
+          # unset. Verify the current names against code.claude.com/docs before
+          # relying on them.
+          CLAUDE_CODE_USE_BEDROCK: ${{ env.AUTH_MODE == 'bedrock' && '1' || '' }}
+          CLAUDE_CODE_USE_VERTEX: ${{ env.AUTH_MODE == 'vertex' && '1' || '' }}
+          # Region per provider. Both are ignored by the mode that is not
+          # active. Point these at a region where your account actually has the
+          # model enabled; the default below is a starting guess, not a fact
+          # about your account.
+          AWS_REGION: us-east-1
+          CLOUD_ML_REGION: us-east5
+          # Vertex needs the billing/serving project explicitly. Federating the
+          # identity is not enough: without this, the run fails with "No
+          # projectId was given and it could not be resolved from credentials."
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          set -uo pipefail
+
+          # --print runs one prompt and exits. --output-format json wraps the
+          # answer in a machine-parseable envelope, so parsing does not depend
+          # on the model remembering a prose instruction to emit JSON.
+          # --permission-mode plan makes read-only analysis structural rather
+          # than advisory: plan mode keeps its blocks in non-interactive runs,
+          # so the agent cannot edit files. An agent with Write access in a
+          # security scan could helpfully fix the vulnerabilities it finds,
+          # which defeats the purpose of a gate. You want a decision, not a
+          # silent modification.
+          # --allowedTools pre-approves the three read-only tools so they run
+          # without a prompt. On Linux runners, naming Grep or Glob here also
+          # brings both back into the session (the default tool set leaves
+          # them out and searches through Bash instead). It does not remove
+          # other tools; a call that would need a prompt is denied, because
+          # nobody can answer one in -p. To remove tools outright, add --tools.
+          # --bare is minimal mode: it skips auto-discovery of hooks, skills,
+          # plugins, MCP servers, auto memory, and CLAUDE.md. Two reasons it
+          # belongs in a gate. First, a gate should judge the code, not run
+          # hooks or read project instructions that the pull request under
+          # review could itself have edited. Second, and load-bearing here:
+          # under --bare, first-party auth is strictly ANTHROPIC_API_KEY (or
+          # an apiKeyHelper supplied via --settings), and OAuth credentials
+          # and the keychain are never read. That is the API-key-or-nothing
+          # rule enforced by the tool rather than by the check further up.
+          # Bedrock and Vertex are unaffected: --bare only narrows
+          # Anthropic-direct auth, and the cloud providers keep using their
+          # own credentials, which is why one flag can serve all three modes
+          # here. If the gate needs CLAUDE.md context, pass the file explicitly
+          # with --append-system-prompt-file rather than dropping --bare.
+          # Note: no --model here. Omitting it uses your account default;
+          # pin one only when you need to, and check the current model aliases
+          # in the documentation rather than copying an ID out of a book.
+          timeout 900 claude --print \
+            --output-format json \
+            --permission-mode plan \
+            --allowedTools "Read,Grep,Glob" \
+            --bare \
+            "Act as a deployment security gate for this pull request.
+
+             Review the changed files. Check for hardcoded secrets, SQL
+             injection, cross-site scripting, unsafe deserialization, missing
+             authorization checks, and vulnerable dependencies. Scanner
+             reports, when present, are in ${DECISIONS_DIR}/.
+
+             Assess each finding in context, not by severity label alone. A
+             high-severity CVE in a test-only utility that never runs in
+             production is a lower real risk than a medium-severity flaw on an
+             authenticated request path. Say which it is and why.
+
+             Respond with only a JSON object, no prose around it:
+             {
+               \"risk_level\": \"critical|high|medium|low|none\",
+               \"summary\": \"one or two sentences\",
+               \"findings\": [
+                 {\"title\": \"...\", \"severity\": \"...\", \"location\": \"...\",
+                  \"exploitable_in_production\": true,
+                  \"reasoning\": \"...\", \"remediation\": \"...\"}
+               ]
+             }" > "$DECISIONS_DIR/security-raw.json"
+
+          status=$?
+          echo "agent_exit=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" -eq 124 ]; then
+            echo "::warning::The security agent hit the 15 minute timeout."
+          fi
+          exit "$status"
+
+      - name: Apply security policy
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Policy lives here, separately from the agent's assessment. The
+          # agent decides how risky the change is; the gate decides what the
+          # organization does about that level of risk. Keeping them apart
+          # means you can raise or lower a threshold without touching the
+          # analysis, and an improving model does not silently change which
+          # deployments get approved.
+          ALLOW_HIGH_RISK=false
+
+          decision=block
+          risk=unknown
+          summary="The security agent produced no usable assessment."
+
+          if [ "${{ steps.scan.outcome }}" = "success" ] && [ -s "$DECISIONS_DIR/security-raw.json" ]; then
+            parsed=$(python3 - "$DECISIONS_DIR/security-raw.json" <<'PY'
+          import json, sys
+
+          # This parser must never raise. A traceback here would be printed
+          # instead of a decision, the shell would read an empty risk level,
+          # and the only thing standing between a bad change and production
+          # would be the fact that "unknown" happens to block. Every failure
+          # path below returns a JSON object with an "error" key, which the
+          # policy step maps to a block. Fail closed, and say why.
+          def bail(message):
+              print(json.dumps({"error": message}))
+              sys.exit(0)
+
+          try:
+              raw = open(sys.argv[1], encoding="utf-8").read()
+          except OSError as exc:
+              bail(f"could not read the agent output: {exc.strerror}")
+
+          if not raw.strip():
+              bail("the agent produced no output")
+
+          try:
+              envelope = json.loads(raw)
+          except ValueError:
+              # Not JSON at all. Usually a crash message or a usage error on
+              # stdout, so keep a little of it: the text is the diagnosis.
+              bail("agent output was not valid JSON: "
+                   + " ".join(raw.split())[:160])
+
+          # --output-format json returns a JSON *object*. Anything else (an
+          # array, a bare string, a number, null) is not an envelope, so do
+          # not call .get on it. Older or future versions could also shape
+          # this differently, and a scan that cannot be read has proven
+          # nothing either way.
+          if not isinstance(envelope, dict):
+              bail("expected a JSON object from --output-format json, got "
+                   + type(envelope).__name__)
+
+          # Check the error flag before reading the answer: on a failed run
+          # "result" holds the error text, not an assessment.
+          if envelope.get("is_error"):
+              detail = envelope.get("result") or envelope.get("subtype") or ""
+              detail = " ".join(str(detail).split())[:160]
+              bail("the agent reported an error" + (f": {detail}" if detail else ""))
+
+          # The envelope carries the agent's answer as a string under
+          # "result". Fall back to the whole payload if a future version
+          # renames the field, so a rename degrades to a slightly noisier
+          # search rather than a hard failure.
+          inner = envelope.get("result")
+          candidate = inner if isinstance(inner, str) else raw
+
+          start, end = candidate.find("{"), candidate.rfind("}")
+          if start == -1 or end <= start:
+              bail("no JSON object in the agent answer")
+
+          try:
+              assessment = json.loads(candidate[start:end + 1])
+          except ValueError:
+              bail("the agent answer was not valid JSON")
+
+          # The agent was asked for an object. A list or a string here means
+          # it did not follow the output contract, and guessing would invent
+          # a verdict nobody produced.
+          if not isinstance(assessment, dict):
+              bail("the agent answer was not a JSON object")
+
+          print(json.dumps(assessment))
+          PY
+            )
+            echo "$parsed" > "$DECISIONS_DIR/security-assessment.json"
+
+            # Read both fields in one pass, from the file just written rather
+            # than by piping the variable: with `python3 - <<'PY'` the heredoc
+            # is already stdin (it carries the script), so a piped payload
+            # would be silently discarded and every risk level would read as
+            # "unknown". Pass data as an argument, keep stdin for the script.
+            # This step also must not be the thing that crashes: it runs under
+            # `set -e`, so an exception here would kill the step before any
+            # decision record is written. Print two lines, always.
+            fields=$(python3 - "$DECISIONS_DIR/security-assessment.json" <<'PY'
+          import json, sys
+          try:
+              with open(sys.argv[1], encoding="utf-8") as handle:
+                  data = json.load(handle)
+              if not isinstance(data, dict):
+                  raise ValueError("not an object")
+          except (OSError, ValueError):
+              print("unknown"); print("the gate could not read the assessment")
+              sys.exit(0)
+          risk = data.get("risk_level")
+          risk = str(risk).strip().lower() if isinstance(risk, str) else "unknown"
+          summary = data.get("summary") or data.get("error") or "no summary"
+          # Exactly one line each, so a multi-line summary from the model
+          # cannot shift the field the shell reads.
+          print(risk or "unknown")
+          print(" ".join(str(summary).split()))
+          PY
+            )
+            # Line 1 is the risk level, line 2 the summary. sed rather than
+            # `read`, so a summary containing spaces stays intact.
+            risk=$(printf '%s\n' "$fields" | sed -n '1p')
+            summary=$(printf '%s\n' "$fields" | sed -n '2p')
+            risk="${risk:-unknown}"
+            summary="${summary:-no summary}"
+          fi
+
+          # Decision chain: critical always blocks, high blocks unless policy
+          # explicitly allows it, medium warns, everything else approves. An
+          # unknown risk level is treated as a block, because a gate that
+          # cannot tell you the risk has not done its job.
+          case "$risk" in
+            critical) decision=block ;;
+            high)     if [ "$ALLOW_HIGH_RISK" = "true" ]; then decision=warn; else decision=block; fi ;;
+            medium)   decision=warn ;;
+            low|none) decision=approve ;;
+            *)        decision=block ;;
+          esac
+
+          python3 - "$decision" "$risk" "$summary" <<'PY' > "$DECISIONS_DIR/security-decision.json"
+          import json, os, sys
+          decision, risk, summary = sys.argv[1], sys.argv[2], sys.argv[3]
+          json.dump({
+              "gate": "security",
+              "decision": decision,
+              "risk_level": risk,
+              "summary": summary,
+              "commit": os.environ.get("GITHUB_SHA"),
+              "run_id": os.environ.get("GITHUB_RUN_ID"),
+              "workflow_ref": os.environ.get("GITHUB_WORKFLOW_REF"),
+          }, sys.stdout, indent=2)
+          PY
+
+          {
+            echo "decision=$decision"
+            echo "risk_level=$risk"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Security gate: \`$decision\`"
+            echo ""
+            echo "Risk level: \`$risk\`"
+            echo ""
+            echo "$summary"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$decision" = "block" ]; then
+            echo "::error::Security gate blocked this change (risk: $risk). $summary"
+            exit 1
+          fi
+          if [ "$decision" = "warn" ]; then
+            echo "::warning::Security gate passed with warnings (risk: $risk). $summary"
+          fi
+
+      - name: Upload security gate decision
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: security-gate-decision
+          path: ${{ env.DECISIONS_DIR }}/
+          retention-days: 90
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # 4. Cost gate: preventive budget enforcement before anything is provisioned
+  # ===========================================================================
+  cost-gate:
+    name: Cost gate
+    needs: change-scope
+    if: needs.change-scope.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      decision: ${{ steps.gate.outputs.decision }}
+      monthly_delta: ${{ steps.gate.outputs.monthly_delta }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Prepare decisions directory
+        run: mkdir -p "$DECISIONS_DIR"
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      # A `terraform plan` against real AWS providers needs credentials. This
+      # uses the same workload identity role as the security gate, scoped to a
+      # read-only plan. continue-on-error because the plan below may not need
+      # credentials at all (local state and no data sources), and the
+      # secrets context is not available in a step `if`, so this cannot be
+      # conditioned on the role ARN being configured.
+      - name: Authenticate to AWS for terraform plan (workload identity)
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_GATE_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: agentic-cost-gate-${{ github.run_id }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: Generate a plan for the estimator
+        id: plan
+        continue-on-error: true
+        working-directory: terraform
+        shell: bash
+        run: |
+          # set -e so a failing init or plan fails the step immediately. The
+          # next step branches on steps.plan.outcome, which only reflects the
+          # step's exit status, so swallowing an early failure here would let
+          # the cost gate run against a stale or missing plan.
+          set -euo pipefail
+          # Point this job at a throwaway local backend. Without it, a
+          # configuration that declares a remote backend (S3, HCP Terraform)
+          # stops at `terraform plan` with "Backend initialization required",
+          # and the gate fails closed on every pull request. With local state
+          # the plan prices every declared resource, which is what the
+          # category budgets cap. The override file exists only in this job's
+          # checkout and is never committed.
+          printf 'terraform {\n  backend "local" {}\n}\n' > ci_local_backend_override.tf
+          terraform init -input=false
+          terraform plan -input=false -lock=false -out=tfplan.binary
+          terraform show -json tfplan.binary > plan.json
+          test -s plan.json
+
+      # infracost runs from its published CI image. No local install to drift,
+      # and the same command works on a self-hosted runner behind a proxy.
+      - name: Estimate cost with infracost (Docker)
+        id: infracost
+        if: steps.plan.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+        run: |
+          set -uo pipefail
+          if [ -z "${INFRACOST_API_KEY:-}" ]; then
+            echo "::warning::INFRACOST_API_KEY is not set; the cost gate cannot price this plan."
+            exit 1
+          fi
+          set -e
+          docker run --rm \
+            -e INFRACOST_API_KEY \
+            -v "$PWD:/src" \
+            "$INFRACOST_IMAGE" breakdown \
+              --path /src/terraform/plan.json \
+              --format json \
+              --out-file "/src/$DECISIONS_DIR/infracost.json"
+          # The policy step reads steps.infracost.outcome, so this step must
+          # exit non-zero when infracost fails. A report that exists but is
+          # empty is also a failure.
+          test -s "$DECISIONS_DIR/infracost.json"
+
+      - name: Apply budget policy
+        id: gate
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          # The policy script is cost-guardrails.py from this chapter, copied
+          # into the repository as scripts/cost_gate.py. It parses the
+          # infracost payload, groups spend into budget categories, compares
+          # against .github/budget-limits.json, and exits non-zero on a block.
+          # --breakdown reads the report the Docker step already produced, so
+          # infracost runs once rather than twice. --fixture '' turns off the
+          # bundled sample, so a missing estimate is a real gate failure in CI
+          # rather than a demo fallback.
+          if [ ! -f "scripts/cost_gate.py" ]; then
+            echo "::error::scripts/cost_gate.py is missing."
+            echo "Copy companion-repo/chapter-11/code-examples/cost-guardrails.py to scripts/cost_gate.py."
+            exit 1
+          fi
+
+          if [ "${{ steps.infracost.outcome }}" != "success" ]; then
+            # Fail closed: no estimate means no approval. Teams adopting the
+            # gate sometimes start fail-open (swap the exit for a warning) and
+            # tighten once the estimator is reliable.
+            python3 - <<'PY' > "$DECISIONS_DIR/cost-decision.json"
+          import json, os, sys
+          json.dump({
+              "gate": "cost",
+              "decision": "block",
+              "reason": "No cost estimate was produced; policy is fail-closed.",
+              "monthly_delta": None,
+              "commit": os.environ.get("GITHUB_SHA"),
+              "run_id": os.environ.get("GITHUB_RUN_ID"),
+          }, sys.stdout, indent=2)
+          PY
+            echo "decision=block" >> "$GITHUB_OUTPUT"
+            echo "monthly_delta=unknown" >> "$GITHUB_OUTPUT"
+            echo "::error::Cost gate blocked: no estimate available."
+            exit 1
+          fi
+
+          set +e
+          python3 scripts/cost_gate.py \
+            --breakdown "$DECISIONS_DIR/infracost.json" \
+            --budgets .github/budget-limits.json \
+            --fixture '' \
+            --json "$DECISIONS_DIR/cost-decision.json" \
+            | tee "$DECISIONS_DIR/cost-report.txt"
+          gate_status=${PIPESTATUS[0]}
+          set -e
+
+          # Read the decision record the script just wrote. It is our own
+          # format, so the happy path is boring, but "the script died before
+          # writing valid JSON" is exactly when a cost gate must not fall over
+          # and let the run continue: an unreadable record means block. Two
+          # lines out, decision then delta.
+          fields=$(python3 - "$DECISIONS_DIR/cost-decision.json" <<'PY'
+          import json, sys
+          try:
+              with open(sys.argv[1], encoding="utf-8") as handle:
+                  data = json.load(handle)
+              if not isinstance(data, dict):
+                  raise ValueError("not an object")
+          except (OSError, ValueError):
+              print("block"); print("unknown")
+              sys.exit(0)
+          decision = data.get("decision")
+          print(decision if isinstance(decision, str) and decision.strip() else "block")
+          delta = data.get("monthly_delta")
+          print(delta if isinstance(delta, (int, float)) else "unknown")
+          PY
+          )
+          decision=$(printf '%s\n' "$fields" | sed -n '1p')
+          delta=$(printf '%s\n' "$fields" | sed -n '2p')
+          decision="${decision:-block}"
+          delta="${delta:-unknown}"
+
+          {
+            echo "decision=$decision"
+            echo "monthly_delta=$delta"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Cost gate: \`$decision\`"
+            echo ""
+            echo "Estimated monthly delta: \`\$$delta\`"
+            echo ""
+            echo '```text'
+            cat "$DECISIONS_DIR/cost-report.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit "$gate_status"
+
+      - name: Upload cost gate decision
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cost-gate-decision
+          path: ${{ env.DECISIONS_DIR }}/
+          retention-days: 90
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # 5. Summary: one comment, one combined artifact, one place to look
+  # ===========================================================================
+  gate-summary:
+    name: Gate summary
+    needs: [change-scope, fast-gates, security-gate, cost-gate]
+    # Runs even when a gate failed, because a blocked change is exactly when
+    # the reviewer needs the summary. Skipped gates are reported as such.
+    if: always() && needs.change-scope.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Download gate decisions
+        uses: actions/download-artifact@v8
+        with:
+          path: all-decisions
+          merge-multiple: true
+
+      - name: Compose the summary
+        id: compose
+        shell: bash
+        run: |
+          set -euo pipefail
+          fast="${{ needs.fast-gates.result }}"
+          sec="${{ needs.security-gate.result }}"
+          cost="${{ needs.cost-gate.result }}"
+          sec_decision="${{ needs.security-gate.outputs.decision || 'not run' }}"
+          cost_decision="${{ needs.cost-gate.outputs.decision || 'not run' }}"
+
+          {
+            echo "## Agentic quality gates"
+            echo ""
+            echo "| Gate | Result | Decision | Detail |"
+            echo "|------|--------|----------|--------|"
+            echo "| Fast (secrets, dependencies) | \`$fast\` | n/a | a failure here means a detected secret |"
+            echo "| Security | \`$sec\` | \`$sec_decision\` | risk: \`${{ needs.security-gate.outputs.risk_level || 'n/a' }}\` |"
+            echo "| Cost | \`$cost\` | \`$cost_decision\` | monthly delta: \`${{ needs.cost-gate.outputs.monthly_delta || 'n/a' }}\` |"
+            echo ""
+            echo "Full decision records are attached to run [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) as artifacts and retained for 90 days."
+          } > summary.md
+
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment on the pull request
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr comment "${{ github.event.number }}" --body-file summary.md --repo "${{ github.repository }}"
+
+      - name: Upload combined audit trail
+        uses: actions/upload-artifact@v7
+        with:
+          name: gate-audit-trail-${{ github.sha }}
+          path: |
+            all-decisions/
+            summary.md
+          retention-days: 90
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # 6. Deploy: main only, and only behind gates that actually approved
+  # ===========================================================================
+  deploy:
+    name: Deploy
+    needs: [change-scope, fast-gates, security-gate, cost-gate]
+    # Three things are load-bearing here.
+    #
+    # `!cancelled()` is required, not decoration. Without a status-check
+    # function in the `if`, GitHub applies its default rule and skips this job
+    # whenever any needed job was skipped or failed. That would mean an
+    # infrastructure-only change (security gate skipped, correctly) never
+    # deploys. `!cancelled()` opts into evaluating the conditions below
+    # instead, and still stops a cancelled run from deploying.
+    #
+    # The ref and event checks keep deployment off pull requests.
+    #
+    # The result checks then do the real gating: a skipped gate is acceptable
+    # because its scope did not change, but a failed gate is fatal. Every gate
+    # that can block is listed, fast-gates included, so a detected secret stops
+    # the deployment even though the deep gates were skipped behind it.
+    if: |
+      !cancelled() &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      needs.fast-gates.result != 'failure' &&
+      needs.security-gate.result != 'failure' &&
+      needs.cost-gate.result != 'failure'
+    runs-on: ubuntu-latest
+    # A protected environment adds the human approval step for anything above
+    # Level 3 autonomy (Chapter 11, Section 11.1).
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Record the approving gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Deploying ${{ github.sha }}"
+          echo "  fast gates:    ${{ needs.fast-gates.result }}"
+          echo "  security gate: ${{ needs.security-gate.result }} / ${{ needs.security-gate.outputs.decision || 'not in scope' }}"
+          echo "  cost gate:     ${{ needs.cost-gate.result }} / ${{ needs.cost-gate.outputs.decision || 'not in scope' }}"
+
+      - name: Deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Replace with your deployment. The Zero-Downtime Deployer from
+          # Section 11.6 is the natural fit: it runs a canary, validates
+          # health, shifts traffic in stages, and rolls back on its own.
+          # See companion-repo/chapter-11/hands-on-lab/.
+          echo "Deployment step placeholder."

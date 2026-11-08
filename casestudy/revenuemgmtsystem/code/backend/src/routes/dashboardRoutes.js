@@ -1,0 +1,10 @@
+const express = require('express');
+const router = express.Router();
+const dashboardController = require('../controllers/dashboardController');
+
+router.get('/stats', dashboardController.getStats);
+router.get('/chart', dashboardController.getChart);
+router.get('/insight', dashboardController.getInsight);
+router.post('/insight/approve', dashboardController.approveInsight);
+
+module.exports = router;

@@ -1,0 +1,178 @@
+{
+  "dashboard": {
+    "title": "Error Tracking and Correlation",
+    "description": "Correlate errors with deployments and track error rates",
+    "tags": ["errors", "deployment", "sentry", "observability"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Overall Error Rate",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))",
+            "legendFormat": "Error Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 0.01, "color": "yellow"},
+                {"value": 0.05, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Error Rate by Service",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 18, "x": 6, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service)",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "percentunit", "label": "Error Rate"},
+          {"format": "short"}
+        ],
+        "alert": {
+          "name": "High Error Rate",
+          "conditions": [
+            {
+              "type": "query",
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"type": "avg"},
+              "evaluator": {"type": "gt", "params": [0.05]}
+            }
+          ],
+          "frequency": "1m",
+          "handler": 1,
+          "message": "Error rate exceeded 5% threshold"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Error Spikes Around Deployments",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m]))",
+            "legendFormat": "Errors/sec"
+          }
+        ],
+        "annotations": {
+          "list": [
+            {
+              "name": "Deployments",
+              "datasource": "Prometheus",
+              "expr": "deployment_total",
+              "tagKeys": "service,version",
+              "textFormat": "{{service}} v{{version}}",
+              "iconColor": "blue"
+            }
+          ]
+        }
+      },
+      {
+        "id": 4,
+        "title": "Error Rate Before vs After Deployment",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (service, version)",
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "columns": ["service", "version", "Value"],
+              "renameByName": {
+                "Value": "Error Rate"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Top Error Types (from Sentry)",
+        "type": "bargauge",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "topk(10, sum(sentry_errors_total) by (error_type))",
+            "legendFormat": "{{error_type}}"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Time to Detect Errors (Deployment to First Error)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "avg(error_detection_duration_seconds)",
+            "legendFormat": "Avg Detection Time"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 300, "color": "yellow"},
+                {"value": 600, "color": "red"}
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "message": "Placeholder dashboard for error tracking. Connect to Prometheus and optionally Sentry.",
+  "instructions": [
+    "To use this dashboard:",
+    "1. Import in Grafana",
+    "2. Connect Prometheus data source",
+    "3. Optionally: Add Sentry plugin for error details",
+    "4. Ensure these metrics are exported:",
+    "   - http_requests_total (with status label)",
+    "   - deployment_total (for annotations)",
+    "   - sentry_errors_total (if using Sentry integration)",
+    "5. Annotations show deployment events on error graphs",
+    "6. Set up alerts for error rate thresholds"
+  ],
+  "metrics_to_export": {
+    "http_requests_total": "Counter of HTTP requests (labels: status, service, method, endpoint)",
+    "deployment_total": "Counter for deployment annotations",
+    "sentry_errors_total": "Counter of Sentry errors (labels: error_type, service)",
+    "error_detection_duration_seconds": "Time from deployment start to first error detection"
+  },
+  "sentry_integration": {
+    "note": "For full Sentry integration, install Sentry data source plugin in Grafana",
+    "plugin_url": "https://grafana.com/grafana/plugins/grafana-sentry-datasource/",
+    "queries": [
+      "Query Sentry API for error counts",
+      "Group by issue type",
+      "Filter by deployment_id tag"
+    ]
+  }
+}

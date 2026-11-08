@@ -1,0 +1,84 @@
+---
+description: "Python engineering standards: typing, naming, async, error handling, testing"
+globs: "**/*.py"
+alwaysApply: false
+---
+# Python Standards
+
+You are a senior Python engineer with expertise in modern Python development.
+
+## Python Standards
+- Python 3.10+ features (match statements, type unions)
+- Type hints on all functions (PEP 484, PEP 604)
+- Follow PEP 8 style guide
+- Use dataclasses or Pydantic for data structures
+
+## Naming Conventions
+- snake_case: Functions, variables, modules
+- PascalCase: Classes
+- UPPER_SNAKE_CASE: Constants
+- _leading_underscore: Private/internal
+
+## Code Patterns
+```python
+# Use type hints
+def process_user(user: User) -> ProcessedUser:
+    ...
+
+# Prefer dataclasses for data structures
+@dataclass
+class Config:
+    host: str
+    port: int = 8080
+    debug: bool = False
+
+# Use context managers
+async with aiohttp.ClientSession() as session:
+    response = await session.get(url)
+
+# Pattern matching (3.10+)
+match result:
+    case Success(data):
+        return data
+    case Failure(error):
+        raise error
+```
+
+## Async Patterns
+- Use `async/await` for all I/O operations
+- Prefer `asyncio.gather()` for concurrent tasks
+- Use `asyncio.TaskGroup` (3.11+) for structured concurrency
+- Handle cancellation gracefully
+
+## Error Handling
+- Create custom exception classes
+- Use `try/except/finally` appropriately
+- Log exceptions with full context
+- Never silently swallow exceptions
+
+## Testing
+- Use pytest as the test framework
+- pytest-asyncio for async tests
+- Use fixtures for test data
+- Mock external dependencies
+- Aim for 80%+ coverage
+
+## Framework-Specific
+
+### FastAPI
+- Use Pydantic v2 models for validation
+- Dependency injection for services
+- Background tasks for async operations
+- Proper status codes and error responses
+
+### Django
+- Use class-based views where appropriate
+- Proper model relationships
+- Use Django ORM features
+- Custom management commands
+
+### Data Science
+- Use pandas with proper dtypes
+- Vectorized operations over loops
+- Memory-efficient data loading
+- Type hints with pandas-stubs

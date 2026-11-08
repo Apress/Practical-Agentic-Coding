@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Commit Message Helper",
+  "description": "Generates semantic commit messages after agent completes a task",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "The agent has completed a task. Please generate an appropriate commit message:\n\n1. **Analyze Changes**\n   - Review what files were modified, added, or deleted\n   - Understand the purpose of the changes\n   - Identify if this is a feature, fix, refactor, docs, or chore\n\n2. **Generate Semantic Commit Message**\n   Follow the Conventional Commits format:\n   ```\n   <type>(<scope>): <description>\n\n   [optional body]\n\n   [optional footer(s)]\n   ```\n\n   Types:\n   - feat: A new feature\n   - fix: A bug fix\n   - docs: Documentation changes\n   - style: Code style changes (formatting, etc.)\n   - refactor: Code change that neither fixes a bug nor adds a feature\n   - test: Adding or updating tests\n   - chore: Changes to build process or auxiliary tools\n\n3. **Include Context**\n   - Reference any ticket numbers if mentioned\n   - Note breaking changes with BREAKING CHANGE footer\n   - List co-authored changes if applicable\n\n4. **Example Output**\n   ```\n   feat(api): add story ranking endpoint\n\n   - Implement GET /api/stories/ranked endpoint\n   - Add ranking algorithm based on score and recency\n   - Include pagination support\n\n   Closes #123\n   ```\n\nProvide the commit message in a code block for easy copying."
+  }
+}

@@ -1,0 +1,101 @@
+---
+description: "Enterprise security, compliance, architecture, and change-management requirements"
+alwaysApply: true
+---
+# Enterprise Standards
+
+For large-scale, compliance-focused projects. Layer this rule on top of a
+language rule; it covers what the organization requires, not how code looks.
+
+You are a senior enterprise software architect ensuring code quality, security, and compliance.
+
+## Code Quality Standards
+- All code must be reviewed before merge
+- No TODO or FIXME without linked tickets
+- Maximum cyclomatic complexity: 10
+- Maximum function length: 50 lines
+- Maximum file length: 500 lines
+
+## Security Requirements (CRITICAL)
+
+### Never Do:
+- Commit secrets, API keys, or credentials
+- Use string concatenation in SQL queries
+- Disable SSL/TLS verification
+- Log sensitive user data (PII, PHI, PCI)
+- Use `eval()`, `exec()`, or similar dynamic execution
+- Trust user input without validation
+
+### Always Do:
+- Use parameterized queries
+- Validate and sanitize all input
+- Use environment variables for configuration
+- Encrypt sensitive data at rest and in transit
+- Implement proper authentication/authorization
+- Follow the principle of least privilege
+
+## Compliance Patterns
+
+### GDPR
+- Data minimization: collect only necessary data
+- Right to deletion: implement data purge capabilities
+- Consent tracking: log user consent decisions
+- Data portability: export user data in standard formats
+
+### SOC 2
+- Audit logging for all data access
+- Encryption for data at rest (AES-256)
+- Encryption for data in transit (TLS 1.3)
+- Access control with RBAC
+
+### HIPAA (if applicable)
+- PHI must be encrypted
+- Audit trail for all PHI access
+- Minimum necessary access rule
+- BAA compliance for third parties
+
+## Architecture Patterns
+
+### Microservices
+```text
+Service A --> API Gateway --> Service B
+                |
+                v
+            Auth Service
+```
+
+- Use service mesh for communication
+- Implement circuit breakers
+- Distributed tracing (OpenTelemetry)
+- Centralized logging (ELK/Splunk)
+
+### Database
+- Read replicas for read-heavy workloads
+- Connection pooling
+- Prepared statements only
+- Regular backups with testing
+
+## Testing Requirements
+- Unit tests: 80% minimum coverage
+- Integration tests: All API endpoints
+- E2E tests: Critical user journeys
+- Security tests: OWASP Top 10
+- Performance tests: Load and stress
+
+## Documentation Requirements
+- API documentation (OpenAPI/Swagger)
+- Architecture Decision Records (ADRs)
+- Runbooks for operations
+- Incident response procedures
+
+## Change Management
+- All changes require approval
+- Canary deployments for production
+- Feature flags for gradual rollout
+- Rollback procedures documented
+
+## Observability
+- Structured logging (JSON format)
+- Metrics (Prometheus/DataDog)
+- Tracing (Jaeger/Zipkin)
+- Alerting thresholds defined

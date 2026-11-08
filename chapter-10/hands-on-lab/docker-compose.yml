@@ -1,0 +1,44 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: chapter10_redis
+    # 127.0.0.1 keeps this service off your network. If WSL cannot reach it
+    # through Docker Desktop, see Troubleshooting in the README.
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - swarm_network
+
+  redis-commander:
+    # The project publishes its images on GitHub's registry; the Docker Hub
+    # image (rediscommander/redis-commander) has had no release since 2021.
+    image: ghcr.io/joeferner/redis-commander:0.9.1
+    container_name: chapter10_redis_commander
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      # DB 0 is what example_usage.py uses; DB 1 is what the integration tests
+      # and the README's manual handoff check use. Show both in the UI.
+      - REDIS_HOSTS=local:redis:6379:0,tests:redis:6379:1
+      - HTTP_USER=admin
+      - HTTP_PASSWORD=admin
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - swarm_network
+
+networks:
+  swarm_network:
+    driver: bridge
+
+volumes:
+  redis-data:

@@ -1,0 +1,78 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/path/to/project"
+      ],
+      "description": "Secure file system access within project directory."
+    },
+    "github": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "description": "GitHub repository operations including issues, PRs, and code search (GitHub's official MCP server).",
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "description": "Persistent memory for maintaining context across sessions."
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@brave/brave-search-mcp-server",
+        "--transport",
+        "stdio"
+      ],
+      "description": "Web search capabilities for finding documentation and examples (Brave's official MCP server).",
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ],
+      "description": "Browser automation for testing and web scraping (Microsoft's Playwright MCP server)."
+    }
+  },
+  "_comments": {
+    "installation": [
+      "Requires Node.js and npm installed",
+      "npx will download servers on first use",
+      "Some servers require API keys (see env sections)"
+    ],
+    "filesystem": [
+      "Replace /path/to/project with your actual project path",
+      "Only grants access within specified directory"
+    ],
+    "github": [
+      "Create GitHub token at: Settings > Developer settings > Personal access tokens",
+      "Token needs repo scope for private repositories",
+      "Uses GitHub's official MCP server via Docker; the archived @modelcontextprotocol/server-github is deprecated",
+      "GitHub also runs a hosted endpoint (https://api.githubcopilot.com/mcp/) for clients that support remote servers"
+    ],
+    "brave-search": [
+      "Get API key at: https://brave.com/search/api/",
+      "Free tier available with rate limits",
+      "Replaces the archived @modelcontextprotocol/server-brave-search, which npm marks deprecated"
+    ],
+    "playwright": [
+      "Replaces the archived @modelcontextprotocol/server-puppeteer, which npm marks deprecated"
+    ]
+  }
+}

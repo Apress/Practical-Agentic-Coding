@@ -1,0 +1,38 @@
+services:
+  # ChromaDB: the vector store Mem0 writes to (Chapter 9, Section 9.6)
+  chromadb:
+    # Pinned so the lab behaves the same for everyone. ":latest" also works.
+    image: chromadb/chroma:1.5.9
+    container_name: devmemory-chromadb
+    # 127.0.0.1 keeps this service off your network. If WSL cannot reach it
+    # through Docker Desktop, see Troubleshooting in the README.
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # Chroma 1.x persists to /data inside the container. A named volume
+      # keeps it, and `docker compose down -v` removes it.
+      - chroma-data:/data
+    healthcheck:
+      # This image ships no curl and no wget, so the probe speaks HTTP over a
+      # bash TCP redirection. Chroma 1.x serves /api/v2/... and answers the old
+      # /api/v1/... paths with HTTP 410 Gone.
+      test:
+        - CMD
+        - bash
+        - -c
+        - 'exec 3<>/dev/tcp/localhost/8000 && printf "GET /api/v2/heartbeat HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && head -n 1 <&3 | grep -q 200'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - devmemory-network
+
+# Neo4j belongs to the challenge lab and has its own compose file:
+# ../challenge-lab/docker-compose.yml
+
+networks:
+  devmemory-network:
+    driver: bridge
+
+volumes:
+  chroma-data:

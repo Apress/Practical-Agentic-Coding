@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Documentation Sync",
+  "description": "Listens for changes to source files and prompts the agent to update documentation in README or docs folder accordingly",
+  "version": "1",
+  "when": {
+    "type": "Manual Trigger"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Source code has been modified. Please review the changes and update the documentation accordingly. If there is a README.md file, update it to reflect any new features, API changes, or usage instructions. If there is a /docs folder, update the relevant documentation files there as well. Focus on keeping the documentation accurate and up-to-date with the current codebase."
+  }
+}

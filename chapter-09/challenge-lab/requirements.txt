@@ -1,0 +1,7 @@
+# Extends hands-on lab requirements
+mem0ai>=1.0.6,<2              # same pin as the hands-on lab
+chromadb>=1.5,<2              # client matches the chromadb/chroma:1.5.9 server image
+pydantic>=2.5.0,<3.0
+python-dotenv>=1.0.0,<2.0
+neo4j>=5.0.0,<7.0             # Bolt driver for the Neo4j 5 server
+pytest>=7.4.0,<10.0

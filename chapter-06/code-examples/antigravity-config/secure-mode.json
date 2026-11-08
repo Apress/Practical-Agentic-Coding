@@ -1,0 +1,166 @@
+{
+  "//": "Secure Mode configuration for sensitive or client projects. Merge these",
+  "//usage": "values into .antigravity/settings.json, or set the equivalents in",
+  "//usage2": "Antigravity Settings > Security. This is the strict counterpart to",
+  "//usage3": "settings.json in this directory.",
+  "//keys": "Key names change between releases; check antigravity.google/docs before",
+  "//keys2": "relying on a specific key. Replace every example.com placeholder below",
+  "//keys3": "with your own hosts before use.",
+
+  "secureMode": {
+    "enabled": true,
+    "enforcementLevel": "strict"
+  },
+
+  "resourceControls": {
+    "//browser": "Browser URL governance: an allowlist plus a denylist bounds where",
+    "//browser2": "the browser subagent may go, and blocks external image fetches.",
+    "browser": {
+      "allowedDomains": [
+        "localhost",
+        "127.0.0.1",
+        "*.internal.example.com",
+        "github.com"
+      ],
+      "blockedDomains": [
+        "*.ad-network.example",
+        "*.unknown-cdn.example"
+      ],
+      "blockExternalImages": true,
+      "blockIframes": true,
+      "requireHttps": true
+    },
+
+    "//network": "Network governance. Deny by default, then allow what you need.",
+    "network": {
+      "allowedHosts": [
+        "api.internal.example.com",
+        "registry.npmjs.org",
+        "api.github.com"
+      ],
+      "blockedHosts": ["*"],
+      "logAllRequests": true
+    }
+  },
+
+  "reviewPolicies": {
+    "//": "Forced review: nothing consequential happens without an explicit click.",
+
+    "//terminal": "Every terminal command requires review, ignoring any allowlist.",
+    "terminal": {
+      "requireReview": true,
+      "ignoreAllowlist": true,
+      "blockedCommands": ["rm -rf", "sudo", "curl | bash", "wget | bash"]
+    },
+
+    "//files": "File writes require review; these patterns are never touched.",
+    "fileOperations": {
+      "requireReview": true,
+      "sensitivePatterns": [
+        ".env*",
+        "*.pem",
+        "*.key",
+        "**/config/**",
+        "**/secrets/**"
+      ]
+    },
+
+    "//browser": "The browser subagent cannot run JavaScript without approval.",
+    "browserActions": {
+      "requireReview": true,
+      "blockAutoExecution": true
+    },
+
+    "//plans": "The agent cannot move from Plan to Act until you approve the plan.",
+    "implementationPlans": {
+      "requireApproval": true
+    }
+  },
+
+  "fileIntegrity": {
+    "//": "Workspace isolation: the agent stays inside the project directory and",
+    "//2": "honors .gitignore, which is what keeps .env out of its perception.",
+
+    "workspaceIsolation": {
+      "enabled": true,
+      "allowSymlinks": false,
+      "blockParentDirectory": true
+    },
+
+    "gitIntegrity": {
+      "respectGitignore": true,
+      "blockIgnoredFiles": true,
+      "warnOnSensitivePatterns": true
+    },
+
+    "blockedPaths": [
+      ".env",
+      ".env.*",
+      "*.pem",
+      "*.key",
+      "*.p12",
+      "*.pfx",
+      "**/credentials/**",
+      "**/secrets/**",
+      "**/.ssh/**",
+      "**/.aws/**",
+      "**/.gcloud/**"
+    ]
+  },
+
+  "auditLogging": {
+    "//": "Audit trail, written locally. Add your own log sink if you have one.",
+    "enabled": true,
+    "logLevel": "verbose",
+
+    "loggedEvents": [
+      "file_read",
+      "file_write",
+      "file_delete",
+      "terminal_command",
+      "browser_navigation",
+      "network_request",
+      "model_invocation",
+      "approval_request",
+      "approval_granted",
+      "approval_denied"
+    ],
+
+    "storage": {
+      "local": ".antigravity/audit/",
+      "retentionDays": 90
+    }
+  },
+
+  "modelRestrictions": {
+    "//": "Keep experimental and preview models out of regulated work. Fill",
+    "//2": "allowedModels from Antigravity's model selector; names change between",
+    "//3": "releases, so a stale allowlist blocks everything.",
+    "allowedModels": ["gemini-pro-latest", "gemini-flash-latest"],
+    "blockedModels": ["*-experimental", "*-preview"],
+    "dataRetention": {
+      "allowModelTraining": false,
+      "allowDataLogging": false
+    }
+  },
+
+  "alerts": {
+    "//": "Security alerts. Replace the placeholders with your own destinations.",
+    "triggerOn": [
+      "blocked_domain_access",
+      "sensitive_file_access",
+      "blocked_command_attempt",
+      "approval_denied"
+    ],
+    "channels": [
+      {
+        "type": "slack",
+        "webhook": "SLACK_SECURITY_WEBHOOK_URL"
+      },
+      {
+        "type": "email",
+        "recipients": ["security@example.com"]
+      }
+    ]
+  }
+}

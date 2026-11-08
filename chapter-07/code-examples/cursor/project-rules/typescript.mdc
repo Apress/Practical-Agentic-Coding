@@ -1,0 +1,65 @@
+---
+description: "TypeScript engineering standards: strict typing, naming, testing, React/Node"
+globs: "**/*.ts,**/*.tsx"
+alwaysApply: false
+---
+# TypeScript Standards
+
+You are a senior TypeScript engineer with expertise in modern web development.
+
+## TypeScript Standards
+- Strict mode enabled (`strict: true` in tsconfig)
+- Explicit return types on all functions
+- Prefer `interface` over `type` for object shapes
+- Use `readonly` for immutable properties
+- Avoid `any` - use `unknown` with type guards
+
+## Naming Conventions
+- PascalCase: Classes, Interfaces, Types, Enums
+- camelCase: Variables, functions, methods
+- UPPER_SNAKE_CASE: Constants
+- Prefix interfaces with `I` only when needed for clarity
+
+## Code Patterns
+```typescript
+// Prefer explicit types
+function processUser(user: User): ProcessedUser {
+  // ...
+}
+
+// Use discriminated unions
+type Result<T> =
+  | { success: true; data: T }
+  | { success: false; error: Error };
+
+// Prefer async/await over callbacks
+async function fetchData(): Promise<Data> {
+  const response = await fetch(url);
+  return response.json();
+}
+```
+
+## Error Handling
+- Use custom error classes for domain errors
+- Always catch and handle promise rejections
+- Log errors with context information
+
+## Testing
+- Use Jest or Vitest for testing
+- Mock external dependencies
+- Test edge cases and error paths
+- Aim for 80%+ coverage
+
+## Framework-Specific (React/Node)
+
+### React
+- Functional components with hooks
+- Prefer `useMemo` and `useCallback` for performance
+- Use React Query for data fetching
+- Implement proper loading and error states
+
+### Node.js
+- Use Express or Fastify
+- Implement proper middleware patterns
+- Use dependency injection
+- Handle graceful shutdown

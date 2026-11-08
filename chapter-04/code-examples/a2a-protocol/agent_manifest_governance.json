@@ -1,0 +1,61 @@
+{
+  "manifest_version": "1.0.0",
+  "protocol": {
+    "name": "A2A",
+    "version": "1.0",
+    "handshake_type": "standard_discovery"
+  },
+  "identity": {
+    "agent_id": "urn:agent:security-bot-v1",
+    "name": "SecurityBot_Enterprise",
+    "description": "Autonomous security review agent specializing in OWASP Top 10 and SAST analysis.",
+    "owner": "SecurityOps Corp",
+    "contact": "security-agents@securityops.example.com"
+  },
+  "capabilities": [
+    {
+      "id": "task_scan_security",
+      "name": "Security Vulnerability Scan",
+      "description": "Performs a deep static analysis of code artifacts.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "repository_url": { "type": "string", "format": "uri" },
+          "branch": { "type": "string", "default": "main" },
+          "severity_threshold": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] }
+        },
+        "required": ["repository_url"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "vulnerabilities_found": { "type": "integer" },
+          "report_url": { "type": "string", "format": "uri" },
+          "risk_score": { "type": "number", "minimum": 0, "maximum": 10 }
+        }
+      },
+      "pricing": {
+        "unit": "per_scan",
+        "amount": 0.05,
+        "currency": "USD"
+      }
+    }
+  ],
+  "governance": {
+    "compliance": ["SOC2", "GDPR", "EU-AI-Act-Minimal-Risk"],
+    "sla": {
+      "max_latency_ms": 5000,
+      "uptime_guarantee": 0.999
+    },
+    "data_retention_policy": "ephemeral",
+    "trust_score": 0.98
+  },
+  "interaction": {
+    "endpoint": "https://api.securityops.example.com/v1/a2a",
+    "auth": {
+      "type": "OAuth2",
+      "grant_type": "client_credentials",
+      "scopes": ["agent_invoke", "report_read"]
+    }
+  }
+}

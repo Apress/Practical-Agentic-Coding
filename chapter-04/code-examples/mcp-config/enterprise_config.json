@@ -1,0 +1,174 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "name": "Enterprise Development Environment",
+    "description": "Production-ready MCP configuration with security controls and monitoring",
+    "owner": "platform-engineering@example.com",
+    "lastUpdated": "2026-10-18"
+  },
+  "mcpServers": {
+    "github-enterprise": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "-e", "GITHUB_HOST",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_ENTERPRISE_PAT}",
+        "GITHUB_HOST": "${GITHUB_ENTERPRISE_URL}"
+      },
+      "description": "GitHub Enterprise integration via GitHub's official MCP server (Docker image) for code reviews, PR management, and repository analysis.",
+      "permissions": {
+        "read": ["repos", "pulls", "issues", "actions"],
+        "write": ["pulls", "issues", "comments"]
+      },
+      "rateLimit": {
+        "requestsPerMinute": 30,
+        "burstLimit": 50
+      }
+    },
+    "analytics-database": {
+      "command": "npx",
+      "args": ["-y", "@toolbox-sdk/server", "--prebuilt=postgres", "--stdio"],
+      "env": {
+        "POSTGRES_HOST": "analytics-replica.internal",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DATABASE": "analytics",
+        "POSTGRES_USER": "${DB_ANALYTICS_USER}",
+        "POSTGRES_PASSWORD": "${DB_ANALYTICS_PASS}"
+      },
+      "description": "Read-only replica of analytics database via MCP Toolbox for Databases, with query timeout enforcement.",
+      "constraints": {
+        "maxQueryTime": "30s",
+        "maxRowsReturned": 10000,
+        "allowedSchemas": ["public", "metrics"]
+      }
+    },
+    "application-database": {
+      "command": "npx",
+      "args": ["-y", "@toolbox-sdk/server", "--prebuilt=postgres", "--stdio"],
+      "env": {
+        "POSTGRES_HOST": "app-replica.internal",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DATABASE": "production",
+        "POSTGRES_USER": "${DB_APP_USER}",
+        "POSTGRES_PASSWORD": "${DB_APP_PASS}"
+      },
+      "description": "Read-only access to application database for schema inspection and query optimization.",
+      "constraints": {
+        "maxQueryTime": "10s",
+        "allowedOperations": ["SELECT", "EXPLAIN"]
+      }
+    },
+    "project-workspace": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${PROJECT_ROOT}/src",
+        "${PROJECT_ROOT}/tests",
+        "${PROJECT_ROOT}/docs"
+      ],
+      "description": "Sandboxed access to source code, tests, and documentation only.",
+      "exclude": [
+        "**/.env*",
+        "**/secrets/**",
+        "**/*.pem",
+        "**/*.key",
+        "**/node_modules/**"
+      ]
+    },
+    "shared-libraries": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/opt/company/shared-libs"
+      ],
+      "description": "Read-only access to company-wide shared libraries and utilities.",
+      "readOnly": true
+    },
+    "slack-notifications": {
+      "command": "npx",
+      "args": ["-y", "@zencoderai/slack-mcp-server"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
+      },
+      "description": "Slack integration for team notifications and channel queries. The server will not start without both SLACK_BOT_TOKEN and SLACK_TEAM_ID.",
+      "allowedChannels": [
+        "#engineering-alerts",
+        "#deployment-status",
+        "#code-review-requests"
+      ],
+      "permissions": {
+        "read": ["channels.history", "users.info"],
+        "write": ["chat.postMessage", "reactions.add"]
+      }
+    },
+    "jira-tracker": {
+      "type": "http",
+      "url": "https://mcp.atlassian.com/v2/mcp",
+      "description": "Jira and Confluence context through Atlassian's official remote MCP server (the v2 endpoint Atlassian documents as of November 7, 2026). Authentication is interactive OAuth on first connect (in Claude Code, through /mcp); scope the connecting account to the projects the agent needs.",
+      "allowedProjects": ["ENG", "PLATFORM", "INFRA"]
+    },
+    "monitoring-prometheus": {
+      "_comment": "PLACEHOLDER: replace the image name below with a Prometheus MCP server you trust before use. As of November 7, 2026, the MCP Registry (registry.modelcontextprotocol.io) lists several community Prometheus servers whose flags and auth variables differ, so follow the chosen server's own run instructions; the entry shows the intended shape only.",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--network", "monitoring",
+        "REPLACE_WITH_PROMETHEUS_MCP_SERVER_IMAGE",
+        "--prometheus.url=${PROMETHEUS_URL}"
+      ],
+      "env": {
+        "PROMETHEUS_BEARER_TOKEN": "${PROMETHEUS_TOKEN}"
+      },
+      "description": "Query Prometheus for metrics and alerts during debugging sessions."
+    },
+    "secrets-vault": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "VAULT_ADDR",
+        "-e", "VAULT_TOKEN",
+        "hashicorp/vault-mcp-server"
+      ],
+      "env": {
+        "VAULT_ADDR": "${VAULT_ADDR}",
+        "VAULT_TOKEN": "${VAULT_AGENT_TOKEN}"
+      },
+      "description": "HashiCorp Vault integration through HashiCorp's vault-mcp-server image, which HashiCorp describes as intended for local use. Issue it a token bound to a read-only policy; the path lists below record intent and are not enforced by any client.",
+      "allowedPaths": [
+        "secret/data/agents/*",
+        "secret/data/shared/*"
+      ],
+      "deniedPaths": [
+        "secret/data/production/*",
+        "secret/data/admin/*"
+      ]
+    }
+  },
+  "globalSettings": {
+    "logging": {
+      "level": "info",
+      "destination": "stdout",
+      "includeTimestamps": true,
+      "redactSecrets": true
+    },
+    "timeout": {
+      "serverStart": "30s",
+      "requestDefault": "60s",
+      "requestMax": "300s"
+    },
+    "security": {
+      "requireTLS": true,
+      "validateCertificates": true,
+      "auditAllRequests": true
+    }
+  }
+}

@@ -1,0 +1,62 @@
+# API gateway, production, flash sale window 2026-07-18T14:31Z to 14:34Z.
+# Trimmed to the requests that matter. Correlate with payment.log and
+# inventory.log on request_id.
+
+2026-07-18T14:31:02.114Z INFO [gateway] checkout start request_id=req_7f2a00 order=ord_88412 sku=HEADSET-77 qty=1
+2026-07-18T14:31:02.402Z INFO [gateway] checkout ok request_id=req_7f2a00 order=ord_88412 charge=ch_5b1c9e42a077 reservation=rsv_a10c4b7712
+2026-07-18T14:31:47.880Z INFO [gateway] checkout start request_id=req_7f2a01 order=ord_88479 sku=CABLE-9 qty=2
+2026-07-18T14:31:48.201Z INFO [gateway] checkout ok request_id=req_7f2a01 order=ord_88479 charge=ch_7d40aa93bb18 reservation=rsv_c73f019ee4
+
+# ---- incident window opens. Flash sale banner goes live at 14:32:00Z. ----
+# FLAGSHIP-001 had 3 units on hand at 14:32:00Z (see inventory.log audit line).
+
+2026-07-18T14:32:00.318Z INFO [gateway] checkout start request_id=req_7f2a11 order=ord_88510 sku=FLAGSHIP-001 qty=1
+2026-07-18T14:32:00.321Z INFO [gateway] checkout start request_id=req_7f2a12 order=ord_88511 sku=FLAGSHIP-001 qty=1
+2026-07-18T14:32:00.322Z INFO [gateway] checkout start request_id=req_7f2a13 order=ord_88512 sku=FLAGSHIP-001 qty=1
+2026-07-18T14:32:00.324Z INFO [gateway] checkout start request_id=req_7f2a14 order=ord_88513 sku=FLAGSHIP-001 qty=1
+2026-07-18T14:32:00.327Z INFO [gateway] checkout start request_id=req_7f2a15 order=ord_88514 sku=FLAGSHIP-001 qty=1
+2026-07-18T14:32:00.331Z INFO [gateway] checkout start request_id=req_7f2a16 order=ord_88515 sku=FLAGSHIP-001 qty=1
+
+2026-07-18T14:32:00.612Z INFO [gateway] checkout ok request_id=req_7f2a11 order=ord_88510 charge=ch_2e91c05d7f43 reservation=rsv_d0119a4c83
+2026-07-18T14:32:00.658Z INFO [gateway] checkout ok request_id=req_7f2a13 order=ord_88512 charge=ch_0ab6f217c8de reservation=rsv_41b7e0cc95
+2026-07-18T14:32:00.703Z INFO [gateway] checkout ok request_id=req_7f2a12 order=ord_88511 charge=ch_9c3d8e50a1b2 reservation=rsv_6fa2b31d07
+
+2026-07-18T14:32:00.744Z ERROR [gateway] checkout failed request_id=req_7f2a14 order=ord_88513 reservation=rsv_ba55d29e60 stage=commit upstream_error=oversold_inventory
+2026-07-18T14:32:00.749Z INFO [gateway] compensation ok request_id=req_7f2a14 action=refund charge=ch_4f77b1e60d3a
+2026-07-18T14:32:00.802Z ERROR [gateway] checkout failed request_id=req_7f2a15 order=ord_88514 reservation=rsv_18cc7be404 stage=commit upstream_error=oversold_inventory
+2026-07-18T14:32:00.808Z INFO [gateway] compensation ok request_id=req_7f2a15 action=refund charge=ch_63b0d9145aa1
+2026-07-18T14:32:00.871Z ERROR [gateway] checkout failed request_id=req_7f2a16 order=ord_88515 reservation=rsv_9e2143da7f stage=commit upstream_error=oversold_inventory
+2026-07-18T14:32:00.877Z INFO [gateway] compensation ok request_id=req_7f2a16 action=refund charge=ch_ae05c8b3f229
+
+# Customers on ord_88513, ord_88514 and ord_88515 saw:
+#   HTTP 500 {"error":"checkout_failed","message":"could not confirm the order, payment refunded"}
+
+# ---- Later in the same window: the payment processor slows under the burst.
+# The retry recovers. Note the status: these checkouts still confirmed. ----
+
+2026-07-18T14:32:41.006Z INFO [gateway] checkout start request_id=req_7f2a31 order=ord_88602 sku=CABLE-9 qty=1
+2026-07-18T14:32:42.011Z WARNING [gateway] payment timeout request_id=req_7f2a31 order=ord_88602 attempt=1/2 timeout_s=1.0
+2026-07-18T14:32:42.298Z INFO [gateway] checkout ok request_id=req_7f2a31 order=ord_88602 charge=ch_51e7a2d94c60 reservation=rsv_77bd0e3311
+2026-07-18T14:32:55.140Z INFO [gateway] checkout start request_id=req_7f2a34 order=ord_88618 sku=HEADSET-77 qty=1
+2026-07-18T14:32:56.145Z WARNING [gateway] payment timeout request_id=req_7f2a34 order=ord_88618 attempt=1/2 timeout_s=1.0
+2026-07-18T14:32:57.150Z WARNING [gateway] payment timeout request_id=req_7f2a34 order=ord_88618 attempt=2/2 timeout_s=1.0
+2026-07-18T14:32:57.152Z INFO [gateway] compensation ok request_id=req_7f2a34 action=release reservation=rsv_2d90fa6b18
+# Customer on ord_88618 saw:
+#   HTTP 504 {"error":"payment_timeout","message":"payment did not answer in 1.0s"}
+# Stock was released, nothing was charged. Different failure, different code.
+
+# ---- Header truncation warnings. These fire all day, sale or no sale. ----
+
+2026-07-18T14:33:10.004Z WARNING [gateway] header truncated request_id=req_7f2a40 header=User-Agent original_length=214 kept_length=128
+2026-07-18T14:33:25.881Z WARNING [gateway] header truncated request_id=req_7f2a44 header=User-Agent original_length=207 kept_length=128
+2026-07-18T14:33:41.220Z WARNING [gateway] header truncated request_id=req_7f2a49 header=User-Agent original_length=214 kept_length=128
+
+# ---- Second incident window, 14:47Z, same shape on a different SKU. ----
+
+2026-07-18T14:47:12.550Z INFO [gateway] checkout start request_id=req_81cd02 order=ord_89330 sku=HEADSET-77 qty=10
+2026-07-18T14:47:12.552Z INFO [gateway] checkout start request_id=req_81cd03 order=ord_89331 sku=HEADSET-77 qty=10
+2026-07-18T14:47:12.556Z INFO [gateway] checkout start request_id=req_81cd04 order=ord_89332 sku=HEADSET-77 qty=10
+2026-07-18T14:47:12.910Z INFO [gateway] checkout ok request_id=req_81cd02 order=ord_89330 charge=ch_c418d70ba295 reservation=rsv_5a0e17bc42
+2026-07-18T14:47:12.964Z INFO [gateway] checkout ok request_id=req_81cd03 order=ord_89331 charge=ch_88a5f2013dbe reservation=rsv_e6c9481f7d
+2026-07-18T14:47:13.021Z ERROR [gateway] checkout failed request_id=req_81cd04 order=ord_89332 reservation=rsv_3fb01ad8e9 stage=commit upstream_error=oversold_inventory
+2026-07-18T14:47:13.026Z INFO [gateway] compensation ok request_id=req_81cd04 action=refund charge=ch_10de44b6c703

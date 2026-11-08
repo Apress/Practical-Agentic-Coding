@@ -1,0 +1,15 @@
+Constraint: The application must be written in Python 3.13 and use Python libraries like Flask for UI.
+Constraint: Use 'requests' and 'beautifulsoup4' for scraping.
+Constraint: Scrape headlines from 'news.ycombinator.com.'
+Constraint: Output must be saved to a file named 'briefing_YYYY-MM-DD.md'.
+Constraint: Use Amazon Bedrock APIs and Claude Sonnet and Haiku's latest models for summarization.
+Constraint: Always use CloudFormation for infrastructure as code to deploy on AWS and ensure the templates are valid using Kiro Powers.
+Constraint: Deployment of AWS Infra must be in sequence. Write separate tasks for generating testing data if needed. The base template should contain infrastructure components like VPC and networking, DB servers, ECR repositories, and S3 buckets and secrets. The app stack should contain app-related resources that are frequently updated.
+Constraint: The application should be able to deploy on serverless cloud services. Use Amazon Lightsail for deploying Flask apps and Aurora Postgres for the database (if needed) and expose UI applications only through CloudFront.
+Constraint: Unit Test coverage should be 70%
+Constraint: Use Hypothesis library for property-based testing
+Instruction: Group tasks in logical groupings; start with MVP, local deployment, and testing. Once local testing is completed, build CloudFormation templates, validate, and deploy to AWS in dependency order. Test infrastructure on AWS at every stage from database to UI.
+Requirement: As a functional tester, I want to use the Playwright Test Automation framework to test UI functionality end-to-end using the best testing framework to test the web app in the Chrome browser.
+Requirement: Build MVP for story summarization with basic functionality to test end-to-end. In the second phase, we will focus on improving the summarization and adding enhanced features.
+Design: For local development, always use a virtual Python environment for isolated dependency management. Docker for deployment.
+Design: Create AWS Deployment Architecture. You can use AWS tools to generate diagrams.

@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Security Audit",
+  "description": "Performs security checks when Python files are saved, looking for common vulnerabilities",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Perform a security audit on this file:\n\n1. **Credential Exposure**\n   - Check for hardcoded API keys, passwords, or tokens\n   - Look for sensitive data in comments\n   - Identify exposed secrets in configuration\n\n2. **Injection Vulnerabilities**\n   - SQL injection in database queries\n   - Command injection in os/subprocess calls\n   - Template injection risks\n\n3. **Insecure Patterns**\n   - Usage of pickle, eval, exec\n   - Unsafe deserialization\n   - Insecure random number generation for security purposes\n\n4. **Input Validation**\n   - Missing input sanitization\n   - Improper error handling that leaks information\n   - Unvalidated redirects\n\n5. **Dependencies**\n   - Known vulnerable imports\n   - Outdated security-critical libraries\n\nReport findings with severity levels:\n- HIGH: Immediate security risk\n- MEDIUM: Potential security issue\n- LOW: Best practice violation\n\nFor each finding, provide:\n- Location (line number if possible)\n- Description of the issue\n- Recommended remediation"
+  }
+}

@@ -1,0 +1,228 @@
+# LinkForge CI/CD Pipeline
+# Deploys to Azure Container Instances
+
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ${{ secrets.AZURE_CONTAINER_REGISTRY_URL }}
+  IMAGE_NAME: linkforge
+  RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  CONTAINER_NAME: ${{ secrets.AZURE_CONTAINER_INSTANCE_NAME }}
+
+jobs:
+  # Job 1: Test and Lint
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: linkforge_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run linting (flake8)
+        run: flake8 src tests --max-line-length=88
+
+      # Advisory: the reference implementation is not fully type-annotated.
+      # Tighten this to a hard gate as you add annotations to your build.
+      - name: Run type checking (mypy, advisory)
+        run: mypy src --ignore-missing-imports
+        continue-on-error: true
+
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/linkforge_test
+          REDIS_URL: redis://localhost:6379
+        run: |
+          pytest --cov=src --cov-report=xml --cov-fail-under=80
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+
+  # Job 2: Build and Push Docker Image
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY }}
+          username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+                     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+  # Job 3: Deploy to Azure Container Instances
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Container Instances
+        id: deploy
+        uses: azure/aci-deploy@v1
+        with:
+          resource-group: ${{ env.RESOURCE_GROUP }}
+          name: ${{ env.CONTAINER_NAME }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          dns-name-label: linkforge-${{ github.run_number }}
+          registry-login-server: ${{ env.REGISTRY }}
+          registry-username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+          registry-password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+          # SECRET_KEY is reserved for the lab's authentication exercise
+          # (the TODO in src/main.py); the current code does not read it.
+          environment-variables: |
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            REDIS_URL=${{ secrets.REDIS_URL }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+          ports: 8000
+          cpu: 1
+          memory: 1.5
+
+      - name: Health check
+        id: health
+        run: |
+          echo "Waiting for deployment to be healthy..."
+          sleep 30
+          FQDN=$(az container show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --query ipAddress.fqdn \
+            --output tsv)
+          curl -f "http://${FQDN}:8000/health" || exit 1
+          echo "Deployment successful!"
+
+      # The image that just passed its health check becomes the rollback
+      # target for the next run. The service principal in AZURE_CREDENTIALS
+      # needs push rights on the registry (AcrPush or Contributor).
+      - name: Promote deployed image to :stable
+        run: |
+          ACR_NAME="${REGISTRY%%.*}"
+          az acr import \
+            --name "$ACR_NAME" \
+            --source "$REGISTRY/$IMAGE_NAME:${{ github.sha }}" \
+            --image "$IMAGE_NAME:stable" \
+            --force
+          echo "Tagged $IMAGE_NAME:${{ github.sha }} as :stable"
+
+      # Rollback path: only if the deploy or its health check failed (a
+      # promote-step failure leaves a healthy deployment in place), redeploy
+      # the last image that passed its health check (the :stable tag). On
+      # the very first deploy no :stable exists yet, so there is nothing to
+      # roll back to; the failed container is left in place for inspection.
+      - name: Check for a rollback target
+        id: stable
+        if: failure() && (steps.deploy.outcome == 'failure' || steps.health.outcome == 'failure')
+        run: |
+          ACR_NAME="${REGISTRY%%.*}"
+          if az acr repository show --name "$ACR_NAME" \
+              --image "$IMAGE_NAME:stable" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No :stable image in the registry (first deploy?); skipping rollback."
+          fi
+
+      # NOTE: This rollback replaces the container in the SAME container
+      # group, so the service is briefly down while ACI restarts it. A
+      # zero-downtime rollback would keep the old deployment running and
+      # shift traffic with Azure Traffic Manager or Front Door (blue/green),
+      # which needs a second container group plus a traffic-management
+      # resource. That is deliberately out of scope for this lab: the lab
+      # teaches the CI/CD loop, not Azure networking.
+      - name: Roll back to last known-good image (:stable)
+        if: failure() && steps.stable.outputs.exists == 'true'
+        uses: azure/aci-deploy@v1
+        with:
+          resource-group: ${{ env.RESOURCE_GROUP }}
+          name: ${{ env.CONTAINER_NAME }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:stable
+          dns-name-label: linkforge-${{ github.run_number }}
+          registry-login-server: ${{ env.REGISTRY }}
+          registry-username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+          registry-password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+          environment-variables: |
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            REDIS_URL=${{ secrets.REDIS_URL }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+          ports: 8000
+          cpu: 1
+          memory: 1.5
+
+      # The workflow run stays red either way (the health check already
+      # failed); this step only confirms the rolled-back version serves.
+      - name: Verify rollback health
+        if: failure() && steps.stable.outputs.exists == 'true'
+        run: |
+          sleep 30
+          FQDN=$(az container show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --query ipAddress.fqdn \
+            --output tsv)
+          curl -f "http://${FQDN}:8000/health"
+          echo "Rollback to :stable is serving traffic."

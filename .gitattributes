@@ -1,0 +1,53 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Python
+*.py text diff=python
+*.pyx text diff=python
+
+# JavaScript / TypeScript
+*.js text
+*.cjs text
+*.mjs text
+*.ts text
+*.tsx text
+*.css text
+
+# Shell (must keep LF or it will not execute)
+*.sh text eol=lf
+
+# Windows scripts (must keep CRLF)
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Markdown
+*.md text diff=markdown
+
+# JSON/YAML
+*.json text
+*.yml text
+*.yaml text
+
+# Infrastructure
+Dockerfile text
+*.tf text
+*.bicep text
+
+# Kiro hooks and agent prompts
+*.hook text
+*.prompt text
+
+# Jupyter notebooks
+*.ipynb text
+
+# Lockfiles: keep the diff out of code review
+package-lock.json text -diff linguist-generated
+
+# Binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.db binary

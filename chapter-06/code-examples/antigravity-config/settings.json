@@ -1,0 +1,129 @@
+{
+  "//": "Antigravity workspace settings template. Copy to .antigravity/settings.json",
+  "//usage": "in your project and edit. Antigravity's settings UI is the authoritative",
+  "//usage2": "place to change these; this file is a readable record of the decisions.",
+  "//keys": "Key names and model names change between releases. Check",
+  "//keys2": "antigravity.google/docs before relying on any specific key.",
+
+  "editor": {
+    "//": "Antigravity uses the Open VSX Registry by default, so no override is",
+    "//2": "needed. The marketplace choice can be changed in IDE settings, and an",
+    "//3": "extension missing from the registry installs from a VSIX file."
+  },
+
+  "agent": {
+    "//": "Match the model tier to the task: Flash-class for fast localized edits,",
+    "//2": "Pro-class for planning and deep reasoning. Pick the exact names from",
+    "//3": "Antigravity's model selector rather than copying these.",
+    "models": {
+      "default": "gemini-pro-latest",
+      "fast": "gemini-flash-latest",
+      "reasoning": "gemini-pro-latest"
+    },
+
+    "//approve": "Auto-approval. Keep writes and commands under review.",
+    "autoApprove": {
+      "readOperations": true,
+      "safeFileOperations": false,
+      "terminalCommands": false,
+      "networkRequests": false
+    },
+
+    "//context": "What the agent may pull into context.",
+    "context": {
+      "includeGitHistory": true,
+      "maxFilesInContext": 50,
+      "maxTokensPerFile": 10000,
+      "respectGitignore": true
+    }
+  },
+
+  "security": {
+    "//": "Turn Secure Mode on for sensitive or client work. See secure-mode.json",
+    "//2": "in this directory for the stricter variant.",
+    "secureMode": false,
+
+    "//browser": "URL governance for the browser subagent.",
+    "allowedDomains": [
+      "localhost",
+      "*.google.com",
+      "*.github.com",
+      "*.npmjs.com"
+    ],
+    "blockedDomains": [],
+
+    "//files": "File access restrictions. Secrets stay out of reach.",
+    "fileAccess": {
+      "allowOutsideWorkspace": false,
+      "respectGitignore": true,
+      "blockedPaths": [
+        ".env",
+        ".env.*",
+        "*.pem",
+        "*.key",
+        "**/secrets/**"
+      ]
+    }
+  },
+
+  "artifacts": {
+    "//": "Which artifacts the agent produces on its own, and where they land.",
+    "autoGenerate": {
+      "implementationPlans": true,
+      "walkthroughs": true,
+      "testReports": true
+    },
+    "storageDir": ".antigravity/artifacts",
+    "retention": {
+      "keepDays": 30,
+      "maxArtifacts": 100
+    }
+  },
+
+  "knowledge": {
+    "//": "Knowledge Items: the agent's cross-session memory.",
+    "autoExtract": true,
+    "storageDir": ".antigravity/knowledge",
+    "syncWithTeam": false
+  },
+
+  "indexing": {
+    "//": "What the native context engine skips and what it reads first.",
+    "excludePatterns": [
+      "node_modules/**",
+      ".git/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      "*.min.js",
+      "*.bundle.js"
+    ],
+    "priorityFiles": [
+      "package.json",
+      "tsconfig.json",
+      ".agents/rules/**",
+      "AGENTS.md",
+      ".context/**"
+    ]
+  },
+
+  "terminal": {
+    "//": "Terminal integration. Captured output is what lets the agent read a",
+    "//2": "failing build without you pasting it.",
+    "defaultShell": "auto",
+    "historyLimit": 1000,
+    "captureOutput": true
+  },
+
+  "browser": {
+    "//": "Browser subagent. Recording interactions is what produces the",
+    "//2": "walkthrough recordings described in Section 6.3.",
+    "headless": false,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "timeout": 30000,
+    "recordInteractions": true
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "API Documentation Generator",
+  "description": "Generates or updates OpenAPI documentation when API route files are modified",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/routes/**/*.py",
+      "**/api/**/*.py",
+      "**/endpoints/**/*.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "An API route file has been modified. Please update the API documentation:\n\n1. **Extract Endpoint Information**\n   - HTTP methods (GET, POST, PUT, DELETE, etc.)\n   - Route paths and path parameters\n   - Query parameters and their types\n   - Request body schemas\n   - Response schemas and status codes\n\n2. **Parse Documentation**\n   - Extract docstrings for endpoint descriptions\n   - Identify parameter descriptions\n   - Note any authentication requirements\n\n3. **Update OpenAPI Specification**\n   - If docs/openapi.yaml exists, update it\n   - If not, create it following OpenAPI 3.0 format\n   - Include examples where available\n\n4. **Validate Schema**\n   - Ensure the generated schema is valid OpenAPI\n   - Check for missing required fields\n   - Verify type consistency\n\n5. **Report Changes**\n   - List new endpoints added\n   - List modified endpoints\n   - List any endpoints missing documentation\n\nFollow the REST conventions from .kiro/steering/tech.md if available."
+  }
+}

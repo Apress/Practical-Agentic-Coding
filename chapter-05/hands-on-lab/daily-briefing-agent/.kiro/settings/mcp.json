@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "aws-docs": {
+      "command": "uvx",
+      "args": ["awslabs.aws-documentation-mcp-server@latest"],
+      "description": "Search AWS documentation for service information and best practices"
+    },
+    "aws-knowledge": {
+      "url": "https://knowledge-mcp.global.api.aws",
+      "description": "AWS-managed remote server: documentation, regional availability, and architecture guidance (no local install)"
+    },
+    "local-postgres": {
+      "command": "npx",
+      "args": ["-y", "@toolbox-sdk/server", "--prebuilt=postgres", "--stdio"],
+      "env": {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DATABASE": "daily_briefing",
+        "POSTGRES_USER": "user",
+        "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD}"
+      },
+      "description": "Access to local PostgreSQL database for schema inspection via MCP Toolbox for Databases (update connection details)"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+# Zero-Downtime Deployer lab dependencies.
+# Every entry is bounded (>=,<) so a fresh install cannot float onto an
+# untested major release.
+
+# Used by the exercises and tests
+python-dotenv>=1.0.0,<2.0        # Reads .env in config.py
+pytest>=7.4.0,<10.0              # Test suite
+pytest-asyncio>=0.21.0,<2.0      # Async test support
+pytest-cov>=4.1.0,<8.0           # Coverage (optional `--cov` run in the README)
+
+# Optional: only imported when you set USE_MOCK_INFRASTRUCTURE=false, and then
+# only to load your kubeconfig. The real-cluster calls in
+# infrastructure_client.py are left for you to implement.
+kubernetes>=28.1.0,<32.0         # Kubernetes API client
+
+# Optional: Exercise 3 only
+sentry-sdk>=2.0.0,<3.0          # Error tracking integration
+
+# Optional: not used by any exercise; here for readers who extend the
+# deployer with their own model calls (see .env.example)
+anthropic>=0.18.0,<1.0           # Claude API client

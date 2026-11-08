@@ -1,0 +1,181 @@
+[
+  {
+    "testCaseId": "groceries-001",
+    "input": {
+      "description": "WHOLE FOODS MARKET #10234",
+      "amount": 87.34,
+      "currency": "USD",
+      "merchant_hint": "Whole Foods Market"
+    },
+    "reference": {
+      "category": "Groceries",
+      "clean_merchant": "Whole Foods Market",
+      "is_recurring": false
+    }
+  },
+  {
+    "testCaseId": "groceries-002",
+    "input": {
+      "description": "TRADER JOES #567 SAN FRAN",
+      "amount": 45.67,
+      "currency": "USD"
+    },
+    "reference": {
+      "category": "Groceries",
+      "clean_merchant": "Trader Joe's",
+      "is_recurring": false
+    }
+  },
+  {
+    "testCaseId": "dining-001",
+    "input": {
+      "description": "STARBUCKS #12345 SEATTLE WA",
+      "amount": 6.45,
+      "currency": "USD",
+      "merchant_hint": "Starbucks"
+    },
+    "reference": {
+      "category": "Dining",
+      "clean_merchant": "Starbucks",
+      "is_recurring": false
+    }
+  },
+  {
+    "testCaseId": "dining-002",
+    "input": {
+      "description": "DOORDASH*CHIPOTLE",
+      "amount": 32.47,
+      "currency": "USD",
+      "merchant_hint": "DoorDash"
+    },
+    "reference": {
+      "category": "Dining",
+      "clean_merchant": "DoorDash",
+      "is_recurring": false
+    }
+  },
+  {
+    "testCaseId": "transport-001",
+    "input": {
+      "description": "UBER *TRIP HELP.UBER.COM",
+      "amount": 24.5,
+      "currency": "USD",
+      "merchant_hint": "Uber"
+    },
+    "reference": {
+      "category": "Transport",
+      "clean_merchant": "Uber",
+      "is_recurring": false
+    }
+  },
+  {
+    "testCaseId": "transport-002",
+    "input": {
+      "description": "SHELL OIL 57442632001",
+      "amount": 52.18,
+      "currency": "USD",
+      "merchant_hint": "Shell"
+    },
+    "reference": {
+      "category": "Transport",
+      "clean_merchant": "Shell",
+      "is_recurring": false
+    }
+  },
+  {
+    "testCaseId": "subscription-001",
+    "input": {
+      "description": "NETFLIX.COM 866-579-7172 CA",
+      "amount": 15.99,
+      "currency": "USD",
+      "merchant_hint": "Netflix"
+    },
+    "reference": {
+      "category": "Subscription",
+      "clean_merchant": "Netflix",
+      "is_recurring": true
+    }
+  },
+  {
+    "testCaseId": "subscription-002",
+    "input": {
+      "description": "SPOTIFY USA 877-778-8469",
+      "amount": 9.99,
+      "currency": "USD",
+      "merchant_hint": "Spotify"
+    },
+    "reference": {
+      "category": "Subscription",
+      "clean_merchant": "Spotify",
+      "is_recurring": true
+    }
+  },
+  {
+    "testCaseId": "subscription-003",
+    "input": {
+      "description": "PLANET FITNESS 24HR",
+      "amount": 49.99,
+      "currency": "USD",
+      "merchant_hint": "Planet Fitness"
+    },
+    "reference": {
+      "category": "Subscription",
+      "clean_merchant": "Planet Fitness",
+      "is_recurring": true
+    }
+  },
+  {
+    "testCaseId": "housing-001",
+    "input": {
+      "description": "SEATTLE CITY LIGHT AUTOPAY",
+      "amount": 145.67,
+      "currency": "USD",
+      "merchant_hint": "Seattle City Light"
+    },
+    "reference": {
+      "category": "Housing",
+      "clean_merchant": "Seattle City Light",
+      "is_recurring": true
+    }
+  },
+  {
+    "testCaseId": "housing-002",
+    "input": {
+      "description": "XFINITY COMCAST 800-934-6489",
+      "amount": 89.99,
+      "currency": "USD"
+    },
+    "reference": {
+      "category": "Housing",
+      "clean_merchant": "Xfinity",
+      "is_recurring": true
+    }
+  },
+  {
+    "testCaseId": "income-001",
+    "input": {
+      "description": "ACME CORP PAYROLL DIR DEP",
+      "amount": -3500.0,
+      "currency": "USD",
+      "merchant_hint": "ACME Corporation"
+    },
+    "reference": {
+      "category": "Income",
+      "clean_merchant": "ACME Corporation",
+      "is_recurring": true
+    }
+  },
+  {
+    "testCaseId": "income-002",
+    "input": {
+      "description": "VENMO CASHOUT",
+      "amount": -150.0,
+      "currency": "USD"
+    },
+    "reference": {
+      "category": "Income",
+      "clean_merchant": "Venmo",
+      "is_recurring": false
+    }
+  }
+]

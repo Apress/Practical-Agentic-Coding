@@ -1,0 +1,146 @@
+{
+  "version": "2025.1",
+  "metadata": {
+    "registry_name": "Enterprise Agent Registry",
+    "description": "Internal agent discovery configuration for enterprise deployments",
+    "maintainer": "platform-engineering@example.com"
+  },
+  "discovery_config": {
+    "method": "hybrid",
+    "registry": {
+      "primary": {
+        "url": "https://registry.internal.example.com/v1/agents",
+        "auth": {
+          "type": "mTLS",
+          "cert_path": "${AGENT_CERT_PATH}",
+          "key_path": "${AGENT_KEY_PATH}"
+        },
+        "timeout_ms": 5000,
+        "retry_count": 3
+      },
+      "fallback": {
+        "url": "https://registry.example.com/v1/agents",
+        "auth": {
+          "type": "OAuth2",
+          "client_id": "${REGISTRY_CLIENT_ID}",
+          "client_secret": "${REGISTRY_CLIENT_SECRET}"
+        }
+      }
+    },
+    "local_cache": {
+      "enabled": true,
+      "ttl_seconds": 3600,
+      "max_entries": 1000,
+      "path": "${HOME}/.agent-cache/discovery"
+    }
+  },
+  "search_criteria": {
+    "default_filters": {
+      "min_trust_score": 0.90,
+      "required_compliance": ["SOC2"],
+      "max_latency_ms": 10000
+    },
+    "capability_matching": {
+      "mode": "fuzzy",
+      "similarity_threshold": 0.85
+    }
+  },
+  "known_agents": [
+    {
+      "agent_id": "urn:agent:security-bot-v1",
+      "name": "SecurityBot Enterprise",
+      "endpoint": "https://api.securityops.example.com/.well-known/agent-card.json",
+      "capabilities": ["security_scan", "sast_analysis", "owasp_check"],
+      "trust_score": 0.98,
+      "priority": 1,
+      "notes": "Primary security scanning agent - certified for production use"
+    },
+    {
+      "agent_id": "urn:agent:code-review-v2",
+      "name": "CodeReview Pro",
+      "endpoint": "https://api.codereview.example.com/.well-known/agent-card.json",
+      "capabilities": ["code_review", "style_check", "complexity_analysis"],
+      "trust_score": 0.95,
+      "priority": 2,
+      "notes": "Automated code review with customizable rulesets"
+    },
+    {
+      "agent_id": "urn:agent:doc-generator-v1",
+      "name": "DocGen Assistant",
+      "endpoint": "https://api.docgen.example.com/.well-known/agent-card.json",
+      "capabilities": ["api_docs", "readme_generation", "changelog_update"],
+      "trust_score": 0.92,
+      "priority": 3,
+      "notes": "Documentation generation and maintenance"
+    },
+    {
+      "agent_id": "urn:agent:test-writer-v1",
+      "name": "TestCraft Agent",
+      "endpoint": "https://api.testcraft.example.com/.well-known/agent-card.json",
+      "capabilities": ["unit_test_gen", "integration_test_gen", "coverage_analysis"],
+      "trust_score": 0.94,
+      "priority": 2,
+      "notes": "Automated test generation with high coverage targets"
+    },
+    {
+      "agent_id": "urn:agent:performance-analyzer-v1",
+      "name": "PerfBot",
+      "endpoint": "https://api.perfbot.example.com/.well-known/agent-card.json",
+      "capabilities": ["perf_analysis", "bottleneck_detection", "optimization_suggest"],
+      "trust_score": 0.91,
+      "priority": 3,
+      "notes": "Performance analysis and optimization recommendations"
+    }
+  ],
+  "handshake_protocol": {
+    "version": "2025.1",
+    "timeout_ms": 10000,
+    "require_mutual_auth": true,
+    "capability_negotiation": {
+      "enabled": true,
+      "fallback_behavior": "reject"
+    },
+    "trust_verification": {
+      "verify_chain": true,
+      "check_revocation": true,
+      "minimum_key_strength": 2048
+    }
+  },
+  "delegation_rules": {
+    "max_chain_depth": 3,
+    "require_explicit_consent": true,
+    "budget_inheritance": {
+      "enabled": true,
+      "max_percentage": 80
+    },
+    "allowed_transitions": [
+      {
+        "from": "coding_agent",
+        "to": ["security_agent", "test_agent", "doc_agent"],
+        "auto_approve": true
+      },
+      {
+        "from": "security_agent",
+        "to": ["compliance_agent"],
+        "auto_approve": true
+      },
+      {
+        "from": "*",
+        "to": ["deploy_agent"],
+        "auto_approve": false,
+        "require_human_approval": true
+      }
+    ]
+  },
+  "monitoring": {
+    "enabled": true,
+    "metrics_endpoint": "https://metrics.internal.example.com/a2a",
+    "log_level": "info",
+    "trace_sampling_rate": 0.1,
+    "alerts": {
+      "on_trust_score_drop": true,
+      "on_sla_violation": true,
+      "on_auth_failure": true
+    }
+  }
+}

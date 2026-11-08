@@ -1,0 +1,96 @@
+# AI-DLC Operations pipeline (Chapter 14, Section 14.10 challenge lab).
+#
+# This is a SCAFFOLD, not a working pipeline. Every job below has the shape
+# but not the engineering: the TODOs are the challenge.
+#
+# The 1.x rules do not ship an Operations phase (their repository lists it as
+# future work), so this pipeline IS the phase: you build it here, shaped the
+# way Workflows 2.0 ships it (deployment, health validation, and verification
+# stages with human escalation). Running Workflows 2.0 natively instead? See
+# chapter-14/hands-on-lab/UPDATES-AIDLC-2.0.md in the companion repo for that
+# route.
+#
+# To use it, copy this file to the .github/workflows/ directory at the ROOT of
+# your own repository. GitHub Actions only reads workflows from the repository
+# root, so it will not run from inside this companion repo.
+#
+# Prerequisites before the first run:
+#   - The AI-DLC 1.x rules installed in the repo (see
+#     chapter-14/hands-on-lab/README.md in the companion repo).
+#   - A repository secret holding an API key or workload-identity credential
+#     for the headless agent. Never log a CI runner into a personal
+#     subscription: pipeline runs would then draw on that person's plan
+#     limits, and routing pipeline spend through a personal account hides the
+#     automation cost you need for the Chapter 15 measurement work.
+#   - Deploy credentials for whichever target the canary job talks to.
+
+name: AI-DLC Operations
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Least privilege by default. Add only what a job actually needs.
+permissions:
+  contents: read
+
+jobs:
+  security-gate:
+    name: Security gate (headless agent review)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # needed only if you post findings back to the PR
+    steps:
+      - uses: actions/checkout@v7
+
+      # TODO 1: install the AI-DLC 1.x rules so the headless session runs
+      # under the same workflow contract as your interactive sessions. Reuse
+      # the pinned curl + cp steps from the hands-on lab README.
+
+      # TODO 2: run a headless agent security review of the changed files.
+      # Scope the tool allowlist to read + scan only. A gate returns a
+      # decision (block / warn / approve); it does not fix code.
+      # Authenticate from a repository secret, e.g.:
+      #   env:
+      #     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      # TODO 3: write the decision AND the reasoning to a job artifact so the
+      # Chapter 12 governance test suite can assert over it later.
+      - name: Upload gate decision
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: security-gate-decision
+          path: gate-decisions/
+          if-no-files-found: warn
+
+      # TODO 4: fail the job when the decision is "block" so the merge stops.
+
+  cost-gate:
+    name: Cost gate (infrastructure delta)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # TODO 5: estimate the infrastructure cost delta of this change (the
+      # Chapter 11 cost-guardrail pattern) and fail when it exceeds the
+      # budget you set. Emit the estimate as an artifact too, so cost
+      # decisions are auditable alongside security decisions.
+
+  deploy-canary:
+    name: Canary deploy with automatic rollback
+    needs: [security-gate, cost-gate]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # TODO 6: canary deploy -> health validation -> traffic shift, or roll
+      # back on health failure. This is the Zero-Downtime Deployer pattern
+      # from the Chapter 11 hands-on lab; call it rather than reimplementing
+      # it here.
+
+      # TODO 7: record the deployment decision (shifted or rolled back) and
+      # the health evidence behind it in the same audit artifact trail.

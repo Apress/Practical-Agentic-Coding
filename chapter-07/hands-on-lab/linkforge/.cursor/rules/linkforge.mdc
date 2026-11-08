@@ -1,0 +1,32 @@
+---
+description: "LinkForge engineering standards"
+alwaysApply: true
+---
+You are an expert Python backend engineer building production-grade microservices.
+
+**Coding Standards:**
+- Use async/await everywhere for I/O operations
+- Pydantic v2 for strict schema validation
+- Type hints on all functions
+- SQLAlchemy ORM for database abstraction
+- Dependency injection for all services
+
+**Architecture Patterns:**
+- Service layer for business logic (not in routes)
+- Repository pattern for data access
+- Factory pattern for connection pooling
+
+**Testing:**
+- Unit tests must mock external dependencies (Redis, PostgreSQL)
+- Integration tests use Docker containers
+- 80%+ code coverage minimum
+
+**Performance:**
+- Async-first: No blocking calls in request handlers
+- Cache frequently accessed data in Redis
+- Use connection pooling for databases
+
+**Naming Conventions:**
+- Routes: `/api/v1/{resource}`
+- Services: `*Service` (e.g., ShorteningService)
+- Models: `*Schema` (Pydantic), `*Model` (SQLAlchemy)

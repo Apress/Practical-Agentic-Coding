@@ -1,0 +1,12 @@
+# Organization policy constraining which Model Garden models may be used.
+# Replace ORGANIZATION_ID and the model values with your own allowlist.
+# The constraint gates three actions per model: predict (managed-API
+# inference), deploy, and tune.
+name: organizations/ORGANIZATION_ID/policies/vertexai.allowedModels
+spec:
+  inheritFromParent: false
+  rules:
+    - values:
+        allowedValues:
+          - publishers/anthropic/models/claude-sonnet-5-5:predict
+          - publishers/google/models/gemini-3.8-flash:predict

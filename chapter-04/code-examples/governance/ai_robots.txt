@@ -1,0 +1,171 @@
+# ai.robots.txt - Agent Access Control
+# Similar to robots.txt for search engines, this file defines
+# which paths AI agents can and cannot access.
+#
+# No agent tool reads this file natively. It is the written policy;
+# enforce it through your tool's permission rules, hooks, or MCP server
+# arguments (see README.md in this directory). Only User-agent, Allow,
+# and Disallow are standard robots.txt (RFC 9309) records; the other
+# directives below are this repo's extensions.
+#
+# Reference: Chapter 4, Section 4.4 - AGILITY Framework (Limitations)
+
+# ============================================================================
+# DEFAULT RULES (Apply to all agents)
+# ============================================================================
+
+User-agent: *
+
+# Allowed directories
+Allow: /src/
+Allow: /tests/
+Allow: /docs/
+Allow: /examples/
+
+# Explicitly prohibited (security critical)
+Disallow: /infrastructure/
+Disallow: /security/
+Disallow: /billing/
+Disallow: /.env*
+Disallow: /**/secrets/
+Disallow: /**/*.pem
+Disallow: /**/*.key
+Disallow: /**/*.crt
+Disallow: /**/credentials/
+Disallow: /**/private/
+
+# Infrastructure files
+Disallow: /Dockerfile*
+Disallow: /docker-compose*.yml
+Disallow: /.github/workflows/
+Disallow: /k8s/
+Disallow: /terraform/
+
+# Database and migrations
+Disallow: /migrations/
+Disallow: /**/alembic/
+
+# Package management
+Disallow: /node_modules/
+Disallow: /venv/
+Disallow: /__pycache__/
+Disallow: /.git/
+
+# ============================================================================
+# CODE REVIEWER AGENT
+# ============================================================================
+
+User-agent: code-reviewer-agent
+
+# Can read source and tests
+Allow: /src/
+Allow: /tests/
+Allow: /docs/
+
+# Cannot modify authentication
+Disallow: /src/auth/
+Disallow: /src/security/
+
+# Read-only access to config examples
+Allow: /config/examples/
+Disallow: /config/production/
+
+# ============================================================================
+# DOCUMENTATION AGENT
+# ============================================================================
+
+User-agent: docs-agent
+
+# Limited to documentation directories
+Allow: /docs/
+Allow: /README.md
+Allow: /CHANGELOG.md
+Allow: /CONTRIBUTING.md
+
+# Cannot access source code
+Disallow: /src/
+Disallow: /tests/
+Disallow: /infrastructure/
+
+# ============================================================================
+# SECURITY REVIEW AGENT
+# ============================================================================
+
+User-agent: security-review-agent
+
+# Can read everything for security analysis
+Allow: /src/
+Allow: /tests/
+Allow: /infrastructure/
+Allow: /docs/
+
+# Still cannot access secrets
+Disallow: /.env*
+Disallow: /**/secrets/
+Disallow: /**/*.pem
+Disallow: /**/*.key
+
+# Read-only (no modifications)
+Read-Only: /src/
+Read-Only: /infrastructure/
+
+# ============================================================================
+# QA/TEST AGENT
+# ============================================================================
+
+User-agent: qa-agent
+
+# Can modify tests
+Allow: /tests/
+Allow: /src/
+
+# Cannot modify infrastructure
+Disallow: /infrastructure/
+Disallow: /migrations/
+Disallow: /.github/
+
+# ============================================================================
+# RATE LIMITS (per agent type)
+# ============================================================================
+
+# Default rate limits
+Rate-Limit: *
+Max-Requests-Per-Hour: 1000
+Max-Files-Per-Session: 50
+Max-Lines-Per-File: 500
+
+# Higher limits for security review
+Rate-Limit: security-review-agent
+Max-Requests-Per-Hour: 2000
+Max-Files-Per-Session: 200
+
+# Lower limits for docs agent
+Rate-Limit: docs-agent
+Max-Requests-Per-Hour: 500
+Max-Files-Per-Session: 20
+
+# ============================================================================
+# APPROVAL REQUIREMENTS
+# ============================================================================
+
+# Paths requiring human approval before modification
+Require-Approval: /src/models/
+Require-Approval: /src/api/
+Require-Approval: /migrations/
+
+# Paths requiring dual approval
+Require-Dual-Approval: /infrastructure/
+Require-Dual-Approval: /billing/
+Require-Dual-Approval: /.github/workflows/
+
+# ============================================================================
+# NOTES
+# ============================================================================
+#
+# 1. This file should be placed at the project root
+# 2. Agents should check this file before any file operation
+# 3. Violations should be logged and reported
+# 4. Update this file when project structure changes
+#
+# Last Updated: 2025-01-15
+# Maintainer: platform-engineering@example.com

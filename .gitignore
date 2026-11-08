@@ -1,0 +1,128 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.whl
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# Test output dumps (never commit run logs)
+playwright_output.txt
+test_output.txt
+test_run_log.txt
+test_error.log
+pytest_output.txt
+
+# Type checking
+.mypy_cache/
+.pytype/
+
+# Linting
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# AI coding assistants
+# Tool folders, context files, and MCP configs at the repository root are a
+# contributor's personal setup and stay out of the repo. Several labs ship tool
+# configuration on purpose (chapter-05 .kiro/, chapter-06 .agents/, chapter-07
+# .cursor/rules/, chapter-08 .claude/); these root-anchored rules leave them alone.
+/.claude/
+/.kiro/
+/.cursor/
+/.agents/
+/.agent/
+/.antigravity/
+/.gemini/
+/.windsurf/
+/.codex/
+/.continue/
+/.amazonq/
+/.junie/
+/.roo/
+/.github/copilot-instructions.md
+/.github/instructions/
+/.github/prompts/
+/.mcp.json
+/CLAUDE.md
+/AGENTS.md
+/GEMINI.md
+/.cursorrules
+/.windsurfrules
+/.clinerules
+# Personal settings and session histories, wherever a tool writes them
+**/.claude/settings.local.json
+CLAUDE.local.md
+.aider*
+.specstory/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment / Secrets
+# .env.example files stay tracked; real .env files never do.
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+**/secrets/
+**/credentials/
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker-compose.override.yml
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.next/
+.nuxt/
+# package-lock.json is intentionally NOT ignored: the Node apps in this repo
+# (chapter-06 moneymind, casestudy/) need it for reproducible installs.
+
+# Replit paste / scratch artifacts
+Pasted-*.txt
+paste-*.txt
+.replit.local
+replit.nix.local
+
+# Data / Storage (local lab artifacts)
+*.db
+*.sqlite3
+**/chroma/
+**/qdrant/
+**/neo4j/data/

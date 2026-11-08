@@ -1,0 +1,4 @@
+# The repo root ignores logs/ and *.log. This lab ships log files on purpose:
+# they are the evidence the reader's agent team triages.
+!logs/
+!logs/*.log

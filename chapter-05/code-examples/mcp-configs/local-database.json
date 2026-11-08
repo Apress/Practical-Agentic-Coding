@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "local-db": {
+      "command": "npx",
+      "args": ["-y", "@toolbox-sdk/server", "--prebuilt=postgres", "--stdio"],
+      "env": {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DATABASE": "mydb",
+        "POSTGRES_USER": "user",
+        "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD}"
+      },
+      "description": "Access to the local development database for schema inspection and query execution."
+    },
+    "local-db-readonly": {
+      "command": "npx",
+      "args": ["-y", "@toolbox-sdk/server", "--prebuilt=postgres", "--stdio"],
+      "env": {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DATABASE": "mydb",
+        "POSTGRES_USER": "read_only_user",
+        "POSTGRES_PASSWORD": "${POSTGRES_READONLY_PASSWORD}"
+      },
+      "description": "Read-only access to local database for safe schema exploration (connects as a read-only database role)."
+    }
+  },
+  "_comments": {
+    "usage": "Replace the host, port, database, and user values with your actual database details",
+    "security": "Never commit actual credentials. Use environment variables or secrets management.",
+    "server": "Matches Chapter Listing 5-1: MCP Toolbox for Databases, the maintained successor to the archived reference mcp/postgres image. Servers age; check the MCP registry for current entries.",
+    "readonly": "Read-only enforcement lives in the database: create a role with SELECT-only grants and connect as that role."
+  }
+}
